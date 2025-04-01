@@ -1,0 +1,2 @@
+# NestedOT
+Nested Optimal Transport
