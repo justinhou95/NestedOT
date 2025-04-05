@@ -25,8 +25,8 @@ std::vector<std::map<std::vector<int>, std::map<int, int>>> qpath2mu_x(Eigen::Ma
 std::vector<ConditionalDistribution> mu_x2kernel_x(std::vector<std::map<std::vector<int>, std::map<int, int>>>& mu_x);
 
 // Solver
-std::vector<std::vector<float>> SquareCost(std::vector<int>& vx, std::vector<int>& vy, std::vector<std::vector<float>>& cost_matrix);
+std::vector<std::vector<double>> SquareCost(std::vector<int>& vx, std::vector<int>& vy, std::vector<std::vector<double>>& cost_matrix);
 
-void AddDppValue(std::vector<std::vector<float>>& cost, std::vector<std::vector<float>>& Vtplus, int& i0, int& j0);
+void AddDppValue(std::vector<std::vector<double>>& cost, std::vector<std::vector<double>>& Vtplus, int& i0, int& j0);
 
-float SolveOT(std::vector<float>& wx, std::vector<float>& wy, std::vector<std::vector<float>>& cost);
+double SolveOT(std::vector<double>& wx, std::vector<double>& wy, std::vector<std::vector<double>>& cost);

@@ -4,7 +4,7 @@
 
 struct Distribution{
     std::vector<int> values;
-    std::vector<float> weights;
+    std::vector<double> weights;
 };
 
 struct ConditionalDistribution{

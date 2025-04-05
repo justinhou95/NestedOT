@@ -129,7 +129,7 @@ std::vector<ConditionalDistribution> mu_x2kernel_x(std::vector<std::map<std::vec
 
             std::vector<int> values;
             std::vector<int> counts;
-            std::vector<float> weights(distribution.size());
+            std::vector<double> weights(distribution.size());
             int sum = 0;
             for (auto d : distribution){
                 values.push_back(d.first);
@@ -137,7 +137,7 @@ std::vector<ConditionalDistribution> mu_x2kernel_x(std::vector<std::map<std::vec
                 sum += d.second;
             }
             for (int i=0; i < weights.size(); i++){
-                weights[i] = (float) counts[i]/sum;                
+                weights[i] = (double) counts[i]/sum;                
             }
 
             const Distribution dist = {values, weights}; 

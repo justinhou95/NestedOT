@@ -14,7 +14,7 @@ void print_vector_int(const std::vector<int>& vec) {
     std::cout << ")";
 }
 
-void print_vector_float(const std::vector<float>& vec) {
+void print_vector_double(const std::vector<double>& vec) {
     std::cout << "(";
     for (int i = 0; i < vec.size(); ++i) {
         std::cout << vec[i] << ",";
@@ -50,7 +50,7 @@ void printDistribution(Distribution dist){
     std::cout << "Values: ";
     print_vector_int(dist.values);
     std::cout << " Weights:";
-    print_vector_float(dist.weights);
+    print_vector_double(dist.weights);
     std::cout << std::endl;
 }
 
