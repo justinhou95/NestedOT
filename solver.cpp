@@ -135,32 +135,66 @@ void AddDppValue(std::vector<std::vector<double>>& cost, std::vector<std::vector
     }
 }
 
+
+void print_vector_double(const std::vector<double>& vec);
+
 double SolveOT(std::vector<double>& wx, std::vector<double>& wy, std::vector<std::vector<double>>& cost){
+
     // We need to cast the double to double or have all setup in double in the very beginning, I would prefer the later option for accuracy.
     int n1 = wx.size(); 
     int n2 = wy.size();
-
-    double* X = wx.data();  
-    double* Y = wy.data();
-
-    std::vector<double> flatcost(cost.size() * cost[0].size());
-    for (const auto& row : cost) {
-        flatcost.insert(flatcost.end(), row.begin(), row.end());  // Is it necessary to do like this or we can directly pass the vector double data to a double pointer
-    }
-    double* D = flatcost.data();
-
-    std::vector<double> Gvec(n1*n2);
-    double* G = Gvec.data();            // Flow matrix (output)
-    std::vector<double> alphavec(n1);
-    double* alpha = alphavec.data();          // Dual potentials (output)
-    std::vector<double> betavec(n2);
-    double* beta = betavec.data();           // Dual potentials (output)
     double c = 0.0;
 
-    uint64_t maxIter = 100000;
+    if (n1 == 1 || n2 == 1){
+        for (int i = 0; i < n1; i++){
+            for (int j = 0; j < n2; j++){
+                c += wx[i] * cost[i][j] * wy[j];
+            }
+        }
+    } else {
+        // std::cout << "OT Solver" << std::endl; 
+        double* X = wx.data(); // First marginal histogram 
+        double* Y = wy.data(); // Second marginal histogram
+        double* C = new double[n1 * n2]; // Cost matrix
+        for (int i = 0; i < n1; ++i)
+            for (int j = 0; j < n2; ++j)
+                C[i * n2 + j] = cost[i][j];
+        double* G = new double[n1 * n2]; // Coupling
+        double* alpha = new double[n1]; // First dual potential function  
+        double* beta = new double[n2]; // Second dual potential function          
+        uint64_t maxIter = 100000;
 
-    int result = EMD_wrap(n1, n2, X, Y, D, G, alpha, beta, &c, maxIter);
+        int result = EMD_wrap(n1, n2, X, Y, C, G, alpha, beta, &c, maxIter);
+
+
+        if (result != 1){
+            std::cout << "OT is not solved optimally" << std::endl;
+            std::cout << result << std::endl;
+        } 
+
+        delete[] C;
+        delete[] G;
+        delete[] alpha;
+        delete[] beta;
+    }
+
+    // if (std::isnan(c)){
+    // std::cout << "Get nan" << std::endl; 
+    // print_vector_double(wx);
+    // print_vector_double(wy);
+    // for (int i = 0; i< cost.size(); i++){
+    //     print_vector_double(cost[i]);
+    // }
+    // }
+
+    // for (int i = 0; i < cost.size(); i++){
+    //     print_vector_double(cost[i]);
+    //     std::cout << std::endl;
+    // }
+    // std::cout << c << std::endl;
+
     return c;
+
 }
 
  

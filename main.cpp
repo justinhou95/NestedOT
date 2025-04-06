@@ -6,45 +6,11 @@
 #include "header.h"
 #include "header_main.h"
 
+void print_vector_int(const std::vector<int>& vec);
 
-int EMD_wrap(int n1, int n2, double *X, double *Y, double *D, double *G,
-    double* alpha, double* beta, double *cost, uint64_t maxIter);
+void print_vector_double(const std::vector<double>& vec);
 
 int main() {
-    // Test the code LP solver
-    int n1 = 3, n2 = 3;
-    double X1[] = {0.3, 0.4, 0.3};  // Distribution 1 (supply)
-    double Y1[] = {0.2, 0.5, 0.3};  // Distribution 2 (demand)
-
-    // Distance matrix D[n1][n2] in row-major order
-    double D[] = {
-        0.0, 1.0, 2.0,
-        1.0, 0.0, 1.0,
-        2.0, 1.0, 0.0
-    };
-
-    double G[9] = {0};            // Flow matrix (output)
-    double alpha[3] = {0};          // Dual potentials (output)
-    double beta[3] = {0};           // Dual potentials (output)
-    double cost = 0.0;
-
-    uint64_t maxIter = 100000;
-
-    int result = EMD_wrap(n1, n2, X1, Y1, D, G, alpha, beta, &cost, maxIter);
-
-    if (result == 1) {
-        std::cout << "EMD cost: " << cost << std::endl;
-        std::cout << "Flow matrix G:" << std::endl;
-        for (int i = 0; i < n1; ++i) {
-            for (int j = 0; j < n2; ++j) {
-                std::cout << G[i * n2 + j] << " ";
-            }
-            std::cout << std::endl;
-        }
-    } else {
-        std::cerr << "EMD computation failed with codeeee: " << result << std::endl;
-    }
-
     // Compute numerical adapted Wasserstein distance
 
     constexpr int T = 3;
@@ -58,7 +24,7 @@ int main() {
          2, 3, 0,
          3, 1, 2;
 
-    int n_sample = 10;
+    int n_sample = 3000;
     Eigen::MatrixXd X = Lmatrix2paths(L, n_sample, true, 0, true);
     Eigen::MatrixXd Y = Lmatrix2paths(M, n_sample, true, 0, true);
 
@@ -70,9 +36,8 @@ int main() {
     v_set_add(adaptedX, v_set);
     v_set_add(adaptedY, v_set);
 
-    std::map<double, int> v2q; 
-    std::vector<double> q2v; 
-
+    std::map<double, int> v2q; // Map value to quantization e.g. v2q[3.5] = 123
+    std::vector<double> q2v;  // Map quantization to value e.g.  q2v[123] = 3.5
     int pos = 0;
     for (double v : v_set) {
         v2q[v] = pos;
@@ -83,13 +48,21 @@ int main() {
     Eigen::MatrixXi qX = sort_qpath(quantize_path(adaptedX, v2q).transpose());
     Eigen::MatrixXi qY = sort_qpath(quantize_path(adaptedY, v2q).transpose());
 
+    // std::cout << adaptedX << "\n" << std::endl;
+    // std::cout << adaptedY << "\n" << std::endl;
+    // std::cout << qX << "\n" << std::endl;
+    // std::cout << qY << "\n" << std::endl;
+
     std::vector<std::map<std::vector<int>, std::map<int, int>>> mu_x = qpath2mu_x(qX);
-    std::vector<std::map<std::vector<int>, std::map<int, int>>> nu_y = qpath2mu_x(qX);
+    std::vector<std::map<std::vector<int>, std::map<int, int>>> nu_y = qpath2mu_x(qY);
 
     std::vector<ConditionalDistribution> kernel_x = mu_x2kernel_x(mu_x);
     std::vector<ConditionalDistribution> kernel_y = mu_x2kernel_x(nu_y);
 
     // print_kernel_x(kernel_x);
+    // print_kernel_x(kernel_y);
+
+    std::cout << "Start computing" << std::endl;
 
     std::vector<std::vector<std::vector<double>>> V(T);
     for(int t=0; t<T; t++){
@@ -103,8 +76,12 @@ int main() {
         }
     }
 
+
+    auto start = std::chrono::steady_clock::now();
+
     for (int t = T - 1; t >= 0; t--){
         std::cout << "Timestep " << t << std::endl;
+        std::cout << "Computing " <<  kernel_x[t].nc *  kernel_y[t].nc << " OTs ......." << std::endl;
         for (int ix = 0; ix < kernel_x[t].nc; ix++){
             for (int iy = 0; iy < kernel_y[t].nc; iy++){
                 // Reference with shorter names
@@ -121,6 +98,11 @@ int main() {
             }
         }
     }
+
+    auto end = std::chrono::steady_clock::now();
+    auto diff = end - start;
+    std::cout << std::chrono::duration<double, std::milli>(diff).count()/1000. << " seconds" << std::endl;
+
 
     double AW2 = V[0][0][0];
     std::cout << "AW_2^2: " << AW2 << std::endl;

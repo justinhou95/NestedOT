@@ -59,6 +59,9 @@ void print_kernel_x(std::vector<ConditionalDistribution>& kernel_x){
     int T = kernel_x.size();
     for(int t = 0; t < T; t++){
         std::cout << t << std::endl;
+        std::cout << kernel_x[t].nc << std::endl;
+        print_vector_int(kernel_x[t].nvs);
+        print_vector_int(kernel_x[t].nv_cums);
         for (int ix =0; ix < kernel_x[t].nc; ix++){
             printCondition(kernel_x[t].conds[ix]);
             printDistribution(kernel_x[t].dists[ix]);
