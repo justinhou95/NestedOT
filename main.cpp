@@ -6,6 +6,7 @@
 #include "header.h"
 #include "header_main.h"
 
+
 void print_vector_int(const std::vector<int>& vec);
 
 void print_vector_double(const std::vector<double>& vec);
@@ -24,7 +25,7 @@ int main() {
          2, 3, 0,
          3, 1, 2;
 
-    int n_sample = 3000;
+    int n_sample = 10000;
     Eigen::MatrixXd X = Lmatrix2paths(L, n_sample, true, 0, true);
     Eigen::MatrixXd Y = Lmatrix2paths(M, n_sample, true, 0, true);
 
@@ -76,12 +77,12 @@ int main() {
         }
     }
 
-
     auto start = std::chrono::steady_clock::now();
 
     for (int t = T - 1; t >= 0; t--){
         std::cout << "Timestep " << t << std::endl;
         std::cout << "Computing " <<  kernel_x[t].nc *  kernel_y[t].nc << " OTs ......." << std::endl;
+        #pragma omp parallel for num_threads(8) if(kernel_x[t].nc > 100)
         for (int ix = 0; ix < kernel_x[t].nc; ix++){
             for (int iy = 0; iy < kernel_y[t].nc; iy++){
                 // Reference with shorter names

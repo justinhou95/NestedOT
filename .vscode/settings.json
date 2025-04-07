@@ -56,6 +56,15 @@
         "variant": "cpp",
         "algorithm": "cpp",
         "hash_map": "cpp",
-        "*.inc": "cpp"
+        "*.inc": "cpp",
+        "any": "cpp",
+        "cinttypes": "cpp",
+        "list": "cpp",
+        "regex": "cpp",
+        "shared_mutex": "cpp",
+        "span": "cpp",
+        "valarray": "cpp",
+        "core": "cpp",
+        "unordered_set": "cpp"
     }
 }
