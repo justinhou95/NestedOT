@@ -27,7 +27,7 @@ def Lmatrix2paths(L, n_sample, normalize=False, seed=0, verbose=False):
     return X, A
 
 
-def nested(X, Y):
+def nested(X, Y, delta_n):
     import _wrapper
 
-    return _wrapper.nested(X, Y)
+    return _wrapper.nested(X, Y, delta_n)

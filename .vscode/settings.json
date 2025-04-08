@@ -68,7 +68,9 @@
         "unordered_set": "cpp",
         "dense": "cpp",
         "typeindex": "cpp",
-        "random": "cpp"
+        "random": "cpp",
+        "*.expression": "cpp",
+        "adolcforward": "cpp"
     },
     "C_Cpp.default.includePath": [
         "./include"
