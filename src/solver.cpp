@@ -65,6 +65,7 @@ double SolveOT(std::vector<double>& wx, std::vector<double>& wy, std::vector<std
 }
 
 double Nested(Eigen::MatrixXd& X, Eigen::MatrixXd& Y, double delta_n){
+
     int T = X.rows()-1;
     int n_sample = X.cols();
     Eigen::MatrixXd adaptedX = path2adaptedpath(X, delta_n);
