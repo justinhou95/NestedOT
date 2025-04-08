@@ -1,5 +1,6 @@
 cpu_profile
-
+.venv/
+.vscode/
 # Prerequisites
 *.d
 

@@ -1,117 +1,7 @@
-#include <iostream>
-#include <vector>
-#include "header.h"
+#include "header_solver.h"
 
-/* 
- * Please give relevant credit to the original author (Nicolas Bonneel) if
- * you use this code for a publication.
- */
-
-
- #include "network_simplex_simple.h"
- #include "network_simplex_simple_omp.h"
- #include "EMD.h"
- #include <cstdint>
- 
- 
- int EMD_wrap(int n1, int n2, double *X, double *Y, double *D, double *G,
-                 double* alpha, double* beta, double *cost, uint64_t maxIter)  {
-     // beware M and C are stored in row major C style!!!
- 
-     using namespace lemon;
-     uint64_t n, m, cur;
- 
-     typedef FullBipartiteDigraph Digraph;
-     DIGRAPH_TYPEDEFS(Digraph);
- 
-     // Get the number of non zero coordinates for r and c
-     n=0;
-     for (int i=0; i<n1; i++) {
-         double val=*(X+i);
-         if (val>0) {
-             n++;
-         }else if(val<0){
-             return INFEASIBLE;
-         }
-     }
-     m=0;
-     for (int i=0; i<n2; i++) {
-         double val=*(Y+i);
-         if (val>0) {
-             m++;
-         }else if(val<0){
-             return INFEASIBLE;
-         }
-     }
- 
-     // Define the graph
- 
-     std::vector<uint64_t> indI(n), indJ(m);
-     std::vector<double> weights1(n), weights2(m);
-     Digraph di(n, m);
-     NetworkSimplexSimple<Digraph,double,double, node_id_type> net(di, true, (int) (n + m), n * m, maxIter);
- 
-     // Set supply and demand, don't account for 0 values (faster)
- 
-     cur=0;
-     for (uint64_t i=0; i<n1; i++) {
-         double val=*(X+i);
-         if (val>0) {
-             weights1[ cur ] = val;
-             indI[cur++]=i;
-         }
-     }
- 
-     // Demand is actually negative supply...
- 
-     cur=0;
-     for (uint64_t i=0; i<n2; i++) {
-         double val=*(Y+i);
-         if (val>0) {
-             weights2[ cur ] = -val;
-             indJ[cur++]=i;
-         }
-     }
- 
- 
-     net.supplyMap(&weights1[0], (int) n, &weights2[0], (int) m);
- 
-     // Set the cost of each edge
-     int64_t idarc = 0;
-     for (uint64_t i=0; i<n; i++) {
-         for (uint64_t j=0; j<m; j++) {
-             double val=*(D+indI[i]*n2+indJ[j]);
-             net.setCost(di.arcFromId(idarc), val);
-             ++idarc;
-         }
-     }
- 
-     // Solve the problem with the network simplex algorithm
- 
-     int ret=net.run();
-     uint64_t i, j;
-     if (ret==(int)net.OPTIMAL || ret==(int)net.MAX_ITER_REACHED) {
-         *cost = 0;
-         Arc a; di.first(a);
-         for (; a != INVALID; di.next(a)) {
-             i = di.source(a);
-             j = di.target(a);
-             double flow = net.flow(a);
-             *cost += flow * (*(D+indI[i]*n2+indJ[j-n]));
-             *(G+indI[i]*n2+indJ[j-n]) = flow;
-             *(alpha + indI[i]) = -net.potential(i);
-             *(beta + indJ[j-n]) = net.potential(j);
-         }
- 
-     }
-     
-    //  std::cout << "Some information" << std::endl;
-    //  std::cout << ret << std::endl;
-    //  std::cout << (int)net.OPTIMAL << std::endl;
-    //  std::cout << (int)net.MAX_ITER_REACHED << std::endl;
-     
-     return ret;
- }
+int EMD_wrap(int n1, int n2, double *X, double *Y, double *D, double *G,
+    double* alpha, double* beta, double *cost, uint64_t maxIter);
 
 std::vector<std::vector<double>> SquareCost(std::vector<int>& vx, std::vector<int>& vy, std::vector<std::vector<double>>& cost_matrix){
     int m = vx.size();
@@ -135,12 +25,7 @@ void AddDppValue(std::vector<std::vector<double>>& cost, std::vector<std::vector
     }
 }
 
-
-void print_vector_double(const std::vector<double>& vec);
-
 double SolveOT(std::vector<double>& wx, std::vector<double>& wy, std::vector<std::vector<double>>& cost){
-
-    // We need to cast the double to double or have all setup in double in the very beginning, I would prefer the later option for accuracy.
     int n1 = wx.size(); 
     int n2 = wy.size();
     double c = 0.0;
@@ -152,7 +37,6 @@ double SolveOT(std::vector<double>& wx, std::vector<double>& wy, std::vector<std
             }
         }
     } else {
-        // std::cout << "OT Solver" << std::endl; 
         double* X = wx.data(); // First marginal histogram 
         double* Y = wy.data(); // Second marginal histogram
         double* C = new double[n1 * n2]; // Cost matrix
@@ -163,13 +47,11 @@ double SolveOT(std::vector<double>& wx, std::vector<double>& wy, std::vector<std
         double* alpha = new double[n1]; // First dual potential function  
         double* beta = new double[n2]; // Second dual potential function          
         uint64_t maxIter = 100000;
-
+        
         int result = EMD_wrap(n1, n2, X, Y, C, G, alpha, beta, &c, maxIter);
-
 
         if (result != 1){
             std::cout << "OT is not solved optimally" << std::endl;
-            std::cout << result << std::endl;
         } 
 
         delete[] C;
@@ -178,24 +60,84 @@ double SolveOT(std::vector<double>& wx, std::vector<double>& wy, std::vector<std
         delete[] beta;
     }
 
-    // if (std::isnan(c)){
-    // std::cout << "Get nan" << std::endl; 
-    // print_vector_double(wx);
-    // print_vector_double(wy);
-    // for (int i = 0; i< cost.size(); i++){
-    //     print_vector_double(cost[i]);
-    // }
-    // }
-
-    // for (int i = 0; i < cost.size(); i++){
-    //     print_vector_double(cost[i]);
-    //     std::cout << std::endl;
-    // }
-    // std::cout << c << std::endl;
-
     return c;
 
 }
 
- 
+double Nested(Eigen::MatrixXd& X, Eigen::MatrixXd& Y){
+    int T = X.rows()-1;
+    int n_sample = X.cols();
+    double delta_n = 0.1;
+    Eigen::MatrixXd adaptedX = path2adaptedpath(X, delta_n);
+    Eigen::MatrixXd adaptedY = path2adaptedpath(Y, delta_n);
 
+    std::set<double> v_set;
+    v_set_add(adaptedX, v_set);
+    v_set_add(adaptedY, v_set);
+
+    std::map<double, int> v2q; // Map value to quantization e.g. v2q[3.5] = 123
+    std::vector<double> q2v;  // Map quantization to value e.g.  q2v[123] = 3.5
+    int pos = 0;
+    for (double v : v_set) {
+        v2q[v] = pos;
+        q2v.push_back(v);
+        pos += 1;
+    }
+
+    Eigen::MatrixXi qX = sort_qpath(quantize_path(adaptedX, v2q).transpose());
+    Eigen::MatrixXi qY = sort_qpath(quantize_path(adaptedY, v2q).transpose());
+
+    std::vector<std::map<std::vector<int>, std::map<int, int>>> mu_x = qpath2mu_x(qX);
+    std::vector<std::map<std::vector<int>, std::map<int, int>>> nu_y = qpath2mu_x(qY);
+
+    std::vector<ConditionalDistribution> kernel_x = mu_x2kernel_x(mu_x);
+    std::vector<ConditionalDistribution> kernel_y = mu_x2kernel_x(nu_y);
+
+    std::cout << "Start computing" << std::endl;
+
+    std::vector<std::vector<std::vector<double>>> V(T);
+    for(int t=0; t<T; t++){
+        V[t] = std::vector<std::vector<double>>(kernel_x[t].nc, std::vector<double>(kernel_y[t].nc, 0.0f));
+    }
+
+    std::vector<std::vector<double>> cost_matrix(q2v.size(), std::vector<double>(q2v.size(), 0.0f));
+    for (int i = 0; i < q2v.size(); i++){
+        for (int j = 0; j < q2v.size(); j++){
+            cost_matrix[i][j] = (q2v[i] - q2v[j]) * (q2v[i] - q2v[j]);
+        }
+    }
+
+    auto start = std::chrono::steady_clock::now();
+
+    for (int t = T - 1; t >= 0; t--){
+        std::cout << "Timestep " << t << std::endl;
+        std::cout << "Computing " <<  kernel_x[t].nc *  kernel_y[t].nc << " OTs ......." << std::endl;
+        #pragma omp parallel for num_threads(8) if(kernel_x[t].nc > 100)
+        for (int ix = 0; ix < kernel_x[t].nc; ix++){
+            for (int iy = 0; iy < kernel_y[t].nc; iy++){
+                // Reference with shorter names
+                std::vector<int>& vx = kernel_x[t].dists[ix].values;
+                std::vector<int>& vy = kernel_y[t].dists[iy].values;
+                std::vector<double>& wx = kernel_x[t].dists[ix].weights;
+                std::vector<double>& wy = kernel_y[t].dists[iy].weights;
+                int& i0 = kernel_x[t].nv_cums[ix];
+                int& j0 = kernel_y[t].nv_cums[iy];
+
+                std::vector<std::vector<double>> cost = SquareCost(vx, vy, cost_matrix);
+                if(t < T-1) AddDppValue(cost, V[t+1], i0, j0);
+                V[t][ix][iy] = SolveOT(wx, wy, cost);
+            }
+        }
+    }
+
+    auto end = std::chrono::steady_clock::now();
+    auto diff = end - start;
+    std::cout << std::chrono::duration<double, std::milli>(diff).count()/1000. << " seconds" << std::endl;
+
+
+    double AW2 = V[0][0][0];
+    std::cout << "AW_2^2: " << AW2 << std::endl;
+    std::cout << "Finish" << std::endl;
+
+    return AW2;
+}

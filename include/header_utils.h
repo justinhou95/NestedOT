@@ -1,6 +1,12 @@
 #pragma once
 
+#include <iostream>
 #include <vector>
+#include <Eigen/Dense>
+#include <set>
+#include <map>
+#include <random>
+#include <algorithm>
 
 struct Distribution{
     std::vector<int> values;
