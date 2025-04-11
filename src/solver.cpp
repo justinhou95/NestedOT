@@ -1,4 +1,22 @@
-#include "header_solver.h"
+#include <iostream>
+#include <vector>
+#include <Eigen/Dense>
+#include <set>
+#include <map>
+#include "header_dist.h"
+
+
+Eigen::MatrixXd path2adaptedpath(const Eigen::MatrixXd& samples, double delta_n);
+
+void v_set_add(const Eigen::MatrixXd& mat, std::set<double>& unique_set);
+
+Eigen::MatrixXi quantize_path(Eigen::MatrixXd& adaptedX, std::map<double, int>& v2q);
+
+Eigen::MatrixXi sort_qpath(const Eigen::MatrixXi& path);
+
+std::vector<std::map<std::vector<int>, std::map<int, int>>> qpath2mu_x(Eigen::MatrixXi& qpath, bool& markovian);
+
+std::vector<ConditionalDistribution> mu_x2kernel_x(std::vector<std::map<std::vector<int>, std::map<int, int>>>& mu_x);
 
 int EMD_wrap(int n1, int n2, double *X, double *Y, double *D, double *G,
     double* alpha, double* beta, double *cost, uint64_t maxIter);
@@ -21,6 +39,22 @@ void AddDppValue(std::vector<std::vector<double>>& cost, std::vector<std::vector
     for(int i=0;i<m;i++){
         for(int j=0;j<n;j++){
             cost[i][j] += Vtplus[i0+i][j0+j];
+        }
+    }
+}
+
+void AddDppValue_markovian(
+    std::vector<std::vector<double>>& cost, 
+    std::vector<std::vector<double>>& Vtplus, 
+    std::vector<int>& vx, 
+    std::vector<int>& vy,
+    std::map<int,int>& conds2idx_x,
+    std::map<int,int>& conds2idx_y){
+    int m = cost.size();
+    int n = cost[0].size();
+    for(int i=0;i<m;i++){
+        for(int j=0;j<n;j++){
+            cost[i][j] += Vtplus[conds2idx_x[vx[i]]][conds2idx_y[vy[j]]];
         }
     }
 }
@@ -64,7 +98,7 @@ double SolveOT(std::vector<double>& wx, std::vector<double>& wy, std::vector<std
 
 }
 
-double Nested(Eigen::MatrixXd& X, Eigen::MatrixXd& Y, double delta_n){
+double Nested(Eigen::MatrixXd& X, Eigen::MatrixXd& Y, double& delta_n, bool& markovian){
 
     int T = X.rows()-1;
     int n_sample = X.cols();
@@ -87,8 +121,11 @@ double Nested(Eigen::MatrixXd& X, Eigen::MatrixXd& Y, double delta_n){
     Eigen::MatrixXi qX = sort_qpath(quantize_path(adaptedX, v2q).transpose());
     Eigen::MatrixXi qY = sort_qpath(quantize_path(adaptedY, v2q).transpose());
 
-    std::vector<std::map<std::vector<int>, std::map<int, int>>> mu_x = qpath2mu_x(qX);
-    std::vector<std::map<std::vector<int>, std::map<int, int>>> nu_y = qpath2mu_x(qY);
+
+    // std::cout << qX << std::endl;
+
+    std::vector<std::map<std::vector<int>, std::map<int, int>>> mu_x = qpath2mu_x(qX, markovian);
+    std::vector<std::map<std::vector<int>, std::map<int, int>>> nu_y = qpath2mu_x(qY, markovian);
 
     std::vector<ConditionalDistribution> kernel_x = mu_x2kernel_x(mu_x);
     std::vector<ConditionalDistribution> kernel_y = mu_x2kernel_x(nu_y);
@@ -107,6 +144,9 @@ double Nested(Eigen::MatrixXd& X, Eigen::MatrixXd& Y, double delta_n){
         }
     }
 
+    // void print_kernel_x(std::vector<ConditionalDistribution>& kernel_x);
+    // print_kernel_x(kernel_x);
+
     auto start = std::chrono::steady_clock::now();
 
     for (int t = T - 1; t >= 0; t--){
@@ -124,7 +164,15 @@ double Nested(Eigen::MatrixXd& X, Eigen::MatrixXd& Y, double delta_n){
                 int& j0 = kernel_y[t].nv_cums[iy];
 
                 std::vector<std::vector<double>> cost = SquareCost(vx, vy, cost_matrix);
-                if(t < T-1) AddDppValue(cost, V[t+1], i0, j0);
+                if (t < T - 1){
+                    if (markovian){
+                        std::map<int,int>& conds2idx_x = kernel_x[t].conds2idx;
+                        std::map<int,int>& conds2idx_y = kernel_y[t].conds2idx;
+                        AddDppValue_markovian(cost, V[t + 1], vx, vy, conds2idx_x, conds2idx_y);
+                    } else {
+                        AddDppValue(cost, V[t + 1], i0, j0);
+                    }
+                }
                 V[t][ix][iy] = SolveOT(wx, wy, cost);
             }
         }

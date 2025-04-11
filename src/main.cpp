@@ -5,12 +5,10 @@
 Eigen::MatrixXd Lmatrix2paths(
     Eigen::MatrixXd L,
     int n_sample,
-    bool normalize = false,
-    int seed = 0,
-    bool verbose = false
+    int seed = 0
 );
 
-double Nested(Eigen::MatrixXd& X, Eigen::MatrixXd& Y);
+double Nested(Eigen::MatrixXd& X, Eigen::MatrixXd& Y, double& delta_n, bool& markovian);
 
 int main() {
 
@@ -24,10 +22,12 @@ int main() {
          2, 3, 0,
          3, 1, 2;
 
-    int n_sample = 10000;
-    Eigen::MatrixXd X = Lmatrix2paths(L, n_sample, true, 0, true);
-    Eigen::MatrixXd Y = Lmatrix2paths(M, n_sample, true, 0, true);
+    int n_sample = 100;
+    Eigen::MatrixXd X = Lmatrix2paths(L, n_sample, true);
+    Eigen::MatrixXd Y = Lmatrix2paths(M, n_sample, true);
+    bool markovian = true;
+    double delta_n = 0.01;
 
-    double res = Nested(X, Y);
+    double res = Nested(X, Y, delta_n, markovian);
 }
 

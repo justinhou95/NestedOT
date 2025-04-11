@@ -10,6 +10,8 @@
                 "--std=c++14",
                 "-g",
                 "${fileDirname}/**.cpp",
+                "-I",
+                "./include",
                 // "${file}",
                 "-o",
                 "${fileDirname}/${fileBasenameNoExtension}"

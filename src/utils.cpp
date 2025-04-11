@@ -1,12 +1,17 @@
-#include "header_utils.h"
+#include <iostream>
+#include <vector>
+#include <Eigen/Dense>
+#include <set>
+#include <map>
+#include <random>
+#include <algorithm>
+#include "header_dist.h"
 
 // Generate paths
 Eigen::MatrixXd Lmatrix2paths(
     Eigen::MatrixXd L,
     int n_sample,
-    bool normalize = false,
-    int seed = 0,
-    bool verbose = false
+    int seed = 0
 ) {
 
     int T = L.rows();
@@ -87,7 +92,7 @@ Eigen::MatrixXi sort_qpath(const Eigen::MatrixXi& path) {
     return sorted;
 }
 
-std::vector<std::map<std::vector<int>, std::map<int, int>>> qpath2mu_x(Eigen::MatrixXi& qpath) {
+std::vector<std::map<std::vector<int>, std::map<int, int>>> qpath2mu_x(Eigen::MatrixXi& qpath, bool& markovian) {
     int T = qpath.cols()-1;
 
     std::vector<std::map<std::vector<int>, std::map<int, int>>> mu_x(T);
@@ -95,8 +100,12 @@ std::vector<std::map<std::vector<int>, std::map<int, int>>> qpath2mu_x(Eigen::Ma
     for (int t = 0; t < T; ++t) {
         for (int i = 0; i < qpath.rows(); ++i) {
             std::vector<int> pre_path;
-            for (int k = 0; k <= t; ++k) {
-                pre_path.push_back(qpath(i, k));
+            if (markovian) {
+                pre_path.push_back(qpath(i, t));
+            } else {
+                for (int k = 0; k <= t; ++k) {
+                    pre_path.push_back(qpath(i, k));
+                }
             }
             int next_val = qpath(i, t + 1);
             mu_x[t][pre_path][next_val] += 1;
@@ -114,6 +123,7 @@ std::vector<ConditionalDistribution> mu_x2kernel_x(std::vector<std::map<std::vec
         kernel_x[t].t = t;
 
         kernel_x[t].nv_cums.push_back(0);
+        int idx = 0;
         for (auto pair : mu_x_t) {
             const std::vector<int>& condition = pair.first;
             const std::map<int, int>& distribution = pair.second;
@@ -121,22 +131,40 @@ std::vector<ConditionalDistribution> mu_x2kernel_x(std::vector<std::map<std::vec
             std::vector<int> values;
             std::vector<int> counts;
             std::vector<double> weights(distribution.size());
+
             int sum = 0;
             for (auto d : distribution){
                 values.push_back(d.first);
                 counts.push_back(d.second);
                 sum += d.second;
+
             }
             for (int i=0; i < weights.size(); i++){
                 weights[i] = (double) counts[i]/sum;                
             }
 
-            const Distribution dist = {values, weights}; 
+            // const int x = 1;
+            const Distribution dist = {values, weights};
+
+            // const Distribution dist = {values, weights, x}; 
             kernel_x[t].conds.push_back(condition);
             kernel_x[t].dists.push_back(dist);
             kernel_x[t].nvs.push_back(distribution.size());
             kernel_x[t].nv_cums.push_back(kernel_x[t].nv_cums.back() + distribution.size());
+            kernel_x[t].conds2idx[condition.back()] = idx;
+            idx += 1;
+        }   
+    }
+
+    for (int t = 0; t < T-1; t++){
+        for (int ix =0; ix < kernel_x[t].nc; ix++){
+            std::vector<int> idx_list; 
+            for (int v : kernel_x[t].dists[ix].values){
+                idx_list.push_back(kernel_x[t+1].conds2idx[v]);
+            }
+            kernel_x[t].next_idx.push_back(idx_list);
         }
     }
+
     return kernel_x;
 }

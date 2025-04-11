@@ -2,11 +2,7 @@
 
 #include <iostream>
 #include <vector>
-#include <Eigen/Dense>
-#include <set>
 #include <map>
-#include <random>
-#include <algorithm>
 
 struct Distribution{
     std::vector<int> values;
@@ -19,5 +15,7 @@ struct ConditionalDistribution{
     std::vector<std::vector<int>> conds;
     std::vector<Distribution> dists;
     std::vector<int> nvs;
-    std::vector<int> nv_cums;
+    std::vector<int> nv_cums; // Only use this for non-markovian
+    std::map<int,int> conds2idx; // Only use this for markovian
+    std::vector<std::vector<int>> next_idx; 
 };

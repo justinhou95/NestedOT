@@ -1,21 +1,7 @@
 #include <iostream>
 #include <vector>
 #include <map>
-
-
-struct Distribution{
-    std::vector<int> values;
-    std::vector<double> weights;
-};
-
-struct ConditionalDistribution{
-    int t;
-    int nc;
-    std::vector<std::vector<int>> conds;
-    std::vector<Distribution> dists;
-    std::vector<int> nvs;
-    std::vector<int> nv_cums;
-};
+#include "header_dist.h"
 
 
 // Helper function to print a vector<int>
@@ -73,12 +59,26 @@ void print_kernel_x(std::vector<ConditionalDistribution>& kernel_x){
     for(int t = 0; t < T; t++){
         std::cout << t << std::endl;
         std::cout << kernel_x[t].nc << std::endl;
-        print_vector_int(kernel_x[t].nvs);
-        print_vector_int(kernel_x[t].nv_cums);
+        // print_vector_int(kernel_x[t].nvs);
+        // std::cout << std::endl;
+        // print_vector_int(kernel_x[t].nv_cums);
+        std::cout << std::endl;
+        print_map(kernel_x[t].conds2idx);
+        std::cout << std::endl;
+        if (t < T-1){
+            for (std::vector<int> idx_list : kernel_x[t].next_idx){
+                print_vector_int(idx_list);
+                std::cout << std::endl;
+            }
+        }
+        std::cout << std::endl;
+
         for (int ix =0; ix < kernel_x[t].nc; ix++){
             printCondition(kernel_x[t].conds[ix]);
             printDistribution(kernel_x[t].dists[ix]);
             std::cout << std::endl;
         }
+
+
     }
 }
