@@ -37,6 +37,13 @@ void print_mu_x(const std::map<std::vector<int>, std::map<int, int>>& mu_x) {
     }
 }
 
+void print_mu_x_markovian(const std::map<int, std::map<int, int>>& mu_x) {
+    for (const auto& outer_pair : mu_x) {
+        std::cout << outer_pair.first << " -> ";
+        print_map(outer_pair.second);
+    }
+}
+
 // Print condition as tuple
 void printCondition(std::vector<int> cond){
     std::cout << "Condition: ";
@@ -53,32 +60,3 @@ void printDistribution(Distribution dist){
     std::cout << std::endl;
 }
 
-
-void print_kernel_x(std::vector<ConditionalDistribution>& kernel_x){
-    int T = kernel_x.size();
-    for(int t = 0; t < T; t++){
-        std::cout << t << std::endl;
-        std::cout << kernel_x[t].nc << std::endl;
-        // print_vector_int(kernel_x[t].nvs);
-        // std::cout << std::endl;
-        // print_vector_int(kernel_x[t].nv_cums);
-        std::cout << std::endl;
-        print_map(kernel_x[t].conds2idx);
-        std::cout << std::endl;
-        if (t < T-1){
-            for (std::vector<int> idx_list : kernel_x[t].next_idx){
-                print_vector_int(idx_list);
-                std::cout << std::endl;
-            }
-        }
-        std::cout << std::endl;
-
-        for (int ix =0; ix < kernel_x[t].nc; ix++){
-            printCondition(kernel_x[t].conds[ix]);
-            printDistribution(kernel_x[t].dists[ix]);
-            std::cout << std::endl;
-        }
-
-
-    }
-}

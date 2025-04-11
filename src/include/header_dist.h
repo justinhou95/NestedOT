@@ -16,6 +16,7 @@ struct ConditionalDistribution{
     std::vector<Distribution> dists;
     std::vector<int> nvs;
     std::vector<int> nv_cums; // Only use this for non-markovian
-    std::map<int,int> conds2idx; // Only use this for markovian
+    
+    std::map<int,int> v2idx; // Only use this for markovian
     std::vector<std::vector<int>> next_idx; 
 };

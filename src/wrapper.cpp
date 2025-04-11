@@ -7,15 +7,16 @@
 
 namespace py = pybind11;
 
-double Nested(Eigen::MatrixXd& X, Eigen::MatrixXd& Y, double& delta_n, bool& markovian);
+double Nested(Eigen::MatrixXd& X, Eigen::MatrixXd& Y, double& delta_n, const bool& markovian);
 
-double NestedPython(Eigen::MatrixXd& X, Eigen::MatrixXd& Y, double& delta_n, bool& markovian){
+double NestedPython(Eigen::MatrixXd& X, Eigen::MatrixXd& Y, double& delta_n, const bool& markovian){
     py::scoped_ostream_redirect stream(
         std::cout,                               // std::ostream&
         py::module_::import("sys").attr("stdout") // Python stdout
     );
     return Nested(X, Y, delta_n, markovian);
 }
+
 
 PYBIND11_MODULE(_wrapper, m) {
     m.doc() = R"pbdoc(pnot)pbdoc";

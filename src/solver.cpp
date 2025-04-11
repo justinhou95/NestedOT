@@ -14,9 +14,10 @@ Eigen::MatrixXi quantize_path(Eigen::MatrixXd& adaptedX, std::map<double, int>& 
 
 Eigen::MatrixXi sort_qpath(const Eigen::MatrixXi& path);
 
-std::vector<std::map<std::vector<int>, std::map<int, int>>> qpath2mu_x(Eigen::MatrixXi& qpath, bool& markovian);
+std::vector<std::map<std::vector<int>, std::map<int, int>>> qpath2mu_x(Eigen::MatrixXi& qpath, const bool& markovian);
 
 std::vector<ConditionalDistribution> mu_x2kernel_x(std::vector<std::map<std::vector<int>, std::map<int, int>>>& mu_x);
+
 
 int EMD_wrap(int n1, int n2, double *X, double *Y, double *D, double *G,
     double* alpha, double* beta, double *cost, uint64_t maxIter);
@@ -46,18 +47,17 @@ void AddDppValue(std::vector<std::vector<double>>& cost, std::vector<std::vector
 void AddDppValue_markovian(
     std::vector<std::vector<double>>& cost, 
     std::vector<std::vector<double>>& Vtplus, 
-    std::vector<int>& vx, 
-    std::vector<int>& vy,
-    std::map<int,int>& conds2idx_x,
-    std::map<int,int>& conds2idx_y){
+    std::vector<int>& x_next_idx,
+    std::vector<int>& y_next_idx){
     int m = cost.size();
     int n = cost[0].size();
     for(int i=0;i<m;i++){
         for(int j=0;j<n;j++){
-            cost[i][j] += Vtplus[conds2idx_x[vx[i]]][conds2idx_y[vy[j]]];
+            cost[i][j] += Vtplus[x_next_idx[i]][y_next_idx[j]];
         }
     }
 }
+
 
 double SolveOT(std::vector<double>& wx, std::vector<double>& wy, std::vector<std::vector<double>>& cost){
     int n1 = wx.size(); 
@@ -98,7 +98,11 @@ double SolveOT(std::vector<double>& wx, std::vector<double>& wy, std::vector<std
 
 }
 
-double Nested(Eigen::MatrixXd& X, Eigen::MatrixXd& Y, double& delta_n, bool& markovian){
+
+double Nested(Eigen::MatrixXd& X, Eigen::MatrixXd& Y, double& delta_n, const bool& markovian){
+    // Add p 
+    // Add thread 
+    // grid size
 
     int T = X.rows()-1;
     int n_sample = X.cols();
@@ -127,8 +131,14 @@ double Nested(Eigen::MatrixXd& X, Eigen::MatrixXd& Y, double& delta_n, bool& mar
     std::vector<std::map<std::vector<int>, std::map<int, int>>> mu_x = qpath2mu_x(qX, markovian);
     std::vector<std::map<std::vector<int>, std::map<int, int>>> nu_y = qpath2mu_x(qY, markovian);
 
+    // for (int t = 0; t < T; t++){
+    //     print_mu_x(mu_x[t]);
+    // }    
+
     std::vector<ConditionalDistribution> kernel_x = mu_x2kernel_x(mu_x);
     std::vector<ConditionalDistribution> kernel_y = mu_x2kernel_x(nu_y);
+
+    // print_kernel_x(kernel_x);
 
     std::cout << "Start computing" << std::endl;
 
@@ -144,14 +154,11 @@ double Nested(Eigen::MatrixXd& X, Eigen::MatrixXd& Y, double& delta_n, bool& mar
         }
     }
 
-    // void print_kernel_x(std::vector<ConditionalDistribution>& kernel_x);
-    // print_kernel_x(kernel_x);
-
     auto start = std::chrono::steady_clock::now();
 
     for (int t = T - 1; t >= 0; t--){
         std::cout << "Timestep " << t << std::endl;
-        std::cout << "Computing " <<  kernel_x[t].nc *  kernel_y[t].nc << " OTs ......." << std::endl;
+        std::cout << "Computing " <<  kernel_x[t].nc * kernel_y[t].nc << " OTs ......." << std::endl;
         #pragma omp parallel for num_threads(8) if(kernel_x[t].nc > 100)
         for (int ix = 0; ix < kernel_x[t].nc; ix++){
             for (int iy = 0; iy < kernel_y[t].nc; iy++){
@@ -160,16 +167,16 @@ double Nested(Eigen::MatrixXd& X, Eigen::MatrixXd& Y, double& delta_n, bool& mar
                 std::vector<int>& vy = kernel_y[t].dists[iy].values;
                 std::vector<double>& wx = kernel_x[t].dists[ix].weights;
                 std::vector<double>& wy = kernel_y[t].dists[iy].weights;
-                int& i0 = kernel_x[t].nv_cums[ix];
-                int& j0 = kernel_y[t].nv_cums[iy];
-
+                
                 std::vector<std::vector<double>> cost = SquareCost(vx, vy, cost_matrix);
                 if (t < T - 1){
                     if (markovian){
-                        std::map<int,int>& conds2idx_x = kernel_x[t].conds2idx;
-                        std::map<int,int>& conds2idx_y = kernel_y[t].conds2idx;
-                        AddDppValue_markovian(cost, V[t + 1], vx, vy, conds2idx_x, conds2idx_y);
+                        std::vector<int>& x_next_idx = kernel_x[t].next_idx[ix];
+                        std::vector<int>& y_next_idx = kernel_y[t].next_idx[iy];
+                        AddDppValue_markovian(cost, V[t + 1], x_next_idx, y_next_idx);
                     } else {
+                        int& i0 = kernel_x[t].nv_cums[ix];
+                        int& j0 = kernel_y[t].nv_cums[iy];
                         AddDppValue(cost, V[t + 1], i0, j0);
                     }
                 }
@@ -181,7 +188,6 @@ double Nested(Eigen::MatrixXd& X, Eigen::MatrixXd& Y, double& delta_n, bool& mar
     auto end = std::chrono::steady_clock::now();
     auto diff = end - start;
     std::cout << std::chrono::duration<double, std::milli>(diff).count()/1000. << " seconds" << std::endl;
-
 
     double AW2 = V[0][0][0];
     std::cout << "AW_2^2: " << AW2 << std::endl;

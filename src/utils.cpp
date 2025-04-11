@@ -92,7 +92,7 @@ Eigen::MatrixXi sort_qpath(const Eigen::MatrixXi& path) {
     return sorted;
 }
 
-std::vector<std::map<std::vector<int>, std::map<int, int>>> qpath2mu_x(Eigen::MatrixXi& qpath, bool& markovian) {
+std::vector<std::map<std::vector<int>, std::map<int, int>>> qpath2mu_x(Eigen::MatrixXi& qpath, const bool& markovian) {
     int T = qpath.cols()-1;
 
     std::vector<std::map<std::vector<int>, std::map<int, int>>> mu_x(T);
@@ -113,6 +113,7 @@ std::vector<std::map<std::vector<int>, std::map<int, int>>> qpath2mu_x(Eigen::Ma
     }
     return mu_x;
 }
+
 
 std::vector<ConditionalDistribution> mu_x2kernel_x(std::vector<std::map<std::vector<int>, std::map<int, int>>>& mu_x){
     int T =  mu_x.size();
@@ -151,7 +152,7 @@ std::vector<ConditionalDistribution> mu_x2kernel_x(std::vector<std::map<std::vec
             kernel_x[t].dists.push_back(dist);
             kernel_x[t].nvs.push_back(distribution.size());
             kernel_x[t].nv_cums.push_back(kernel_x[t].nv_cums.back() + distribution.size());
-            kernel_x[t].conds2idx[condition.back()] = idx;
+            kernel_x[t].v2idx[condition.back()] = idx;
             idx += 1;
         }   
     }
@@ -160,7 +161,7 @@ std::vector<ConditionalDistribution> mu_x2kernel_x(std::vector<std::map<std::vec
         for (int ix =0; ix < kernel_x[t].nc; ix++){
             std::vector<int> idx_list; 
             for (int v : kernel_x[t].dists[ix].values){
-                idx_list.push_back(kernel_x[t+1].conds2idx[v]);
+                idx_list.push_back(kernel_x[t+1].v2idx[v]);
             }
             kernel_x[t].next_idx.push_back(idx_list);
         }
