@@ -22,7 +22,7 @@ ext_modules = [
         ],
         # Example: passing in the version to the compiled code
         define_macros=[("VERSION_INFO", __version__)],
-        include_dirs=["./eigen", "./src/include"],
+        include_dirs=["extern/eigen", "./src/include"],
         extra_compile_args=["-fopenmp"],
         extra_link_args=["-fopenmp"],
     ),
@@ -31,7 +31,7 @@ ext_modules = [
 setup(
     name="pnot",
     version=__version__,
-    description="A test project using pybind11",
+    description="Nested Optimal Transport",
     long_description="",
     ext_modules=ext_modules,
     packages=find_packages(),

@@ -18,7 +18,6 @@ std::vector<std::map<std::vector<int>, std::map<int, int>>> qpath2mu_x(Eigen::Ma
 
 std::vector<ConditionalDistribution> mu_x2kernel_x(std::vector<std::map<std::vector<int>, std::map<int, int>>>& mu_x);
 
-
 int EMD_wrap(int n1, int n2, double *X, double *Y, double *D, double *G,
     double* alpha, double* beta, double *cost, uint64_t maxIter);
 
@@ -44,7 +43,7 @@ void AddDppValue(std::vector<std::vector<double>>& cost, std::vector<std::vector
     }
 }
 
-void AddDppValue_markovian(
+void AddDppValueMarkovian(
     std::vector<std::vector<double>>& cost, 
     std::vector<std::vector<double>>& Vtplus, 
     std::vector<int>& x_next_idx,
@@ -173,7 +172,7 @@ double Nested(Eigen::MatrixXd& X, Eigen::MatrixXd& Y, double& delta_n, const boo
                     if (markovian){
                         std::vector<int>& x_next_idx = kernel_x[t].next_idx[ix];
                         std::vector<int>& y_next_idx = kernel_y[t].next_idx[iy];
-                        AddDppValue_markovian(cost, V[t + 1], x_next_idx, y_next_idx);
+                        AddDppValueMarkovian(cost, V[t + 1], x_next_idx, y_next_idx);
                     } else {
                         int& i0 = kernel_x[t].nv_cums[ix];
                         int& j0 = kernel_y[t].nv_cums[iy];
@@ -189,9 +188,9 @@ double Nested(Eigen::MatrixXd& X, Eigen::MatrixXd& Y, double& delta_n, const boo
     auto diff = end - start;
     std::cout << std::chrono::duration<double, std::milli>(diff).count()/1000. << " seconds" << std::endl;
 
-    double AW2 = V[0][0][0];
-    std::cout << "AW_2^2: " << AW2 << std::endl;
+    double nested_ot_value = V[0][0][0];
+    std::cout << "Nested OT value: " << nested_ot_value << std::endl;
     std::cout << "Finish" << std::endl;
 
-    return AW2;
+    return nested_ot_value;
 }
