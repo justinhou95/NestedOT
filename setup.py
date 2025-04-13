@@ -28,7 +28,7 @@ elif system == "Darwin":
     extra_link_args = ["-fopenmp", "-lomp"]
 
     # macOS needs extra handling for Apple Clang
-    # Requires: brew install llvm libomp
+    # Requires: brew install
     # Use Homebrew's LLVM for proper OpenMP support
 
     if machine == "arm64":
