@@ -1,7 +1,6 @@
 import concurrent
 import concurrent.futures
 import time
-from warnings import WarningMessage
 
 import numpy as np
 import ot
@@ -147,15 +146,3 @@ def nested_ot_solver_py(X, Y, delta_n, markovian, parallel):
     print("Numerical Nested OT value: ", nested_ot_value)
 
     return nested_ot_value
-
-
-def nested_ot(X, Y, delta_n, markovian, parallel=True):
-    try:
-        import _wrapper
-
-        return _wrapper.nested_ot_solver(X, Y, delta_n, markovian)
-    except:
-        WarningMessage(
-            "Can not find the C++ solver, using the Python one (much slower)"
-        )
-        return nested_ot_solver_py(X, Y, delta_n, markovian, parallel)

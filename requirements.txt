@@ -2,3 +2,5 @@ jupyter
 notebook
 numpy
 matplotlib
+pot
+tqdm
