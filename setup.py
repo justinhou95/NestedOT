@@ -68,6 +68,7 @@ ext_modules = [
 setup(
     name="pnot",
     version=__version__,
+    author="Ruben Bontorno & Songyan Hou",
     description="Nested Optimal Transport",
     long_description="",
     ext_modules=ext_modules,
