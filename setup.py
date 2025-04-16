@@ -46,7 +46,7 @@ elif system == "Darwin":
 else:
     raise RuntimeError(f"Unsupported platform: {system}")
 
-include_dirs = ["extern/eigen", "./src/include"]
+include_dirs = ["./extern", "./src/include"]
 
 ext_modules = [
     Pybind11Extension(
