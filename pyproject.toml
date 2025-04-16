@@ -5,40 +5,23 @@ requires = [
 ]
 build-backend = "setuptools.build_meta"
 
-# [tool.cibuildwheel]
-# test-command = "python {project}/tests/test.py"
-# test-skip = "*universal2:arm64"
+[project]
+name = "pnot"
+version = "0.0.1"
+authors = [
+  { name="Songyan Hou & Ruben Bontorno", email="justinhou95@gmail.com" },
+]
+description = "Python package for nested optimal transport"
+readme = "README.md"
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+]
+license = "MIT"
 
-# [tool.ruff]
-# target-version = "py37"
+[project.urls]
+Homepage = "https://github.com/justinhou95/NestedOT"
 
-# [tool.ruff.lint]
-# extend-select = [
-#   "B",   # flake8-bugbear
-#   "I",   # isort
-#   "PGH", # pygrep-hooks
-#   "RUF", # Ruff-specific
-#   "UP",  # pyupgrade
-# ]
-
-
-
-# [project]
-# name = "example_package_YOUR_USERNAME_HERE"
-# version = "0.0.1"
-# authors = [
-#   { name="Example Author", email="author@example.com" },
-# ]
-# description = "A small example package"
-# readme = "README.md"
-# requires-python = ">=3.8"
-# classifiers = [
-#     "Programming Language :: Python :: 3",
-#     "Operating System :: OS Independent",
-# ]
-# license = "MIT"
-# license-files = ["LICEN[CS]E*"]
-
-# [project.urls]
-# Homepage = "https://github.com/pypa/sampleproject"
-# Issues = "https://github.com/pypa/sampleproject/issues"
+[project.optional-dependencies]
+test = ["pytest"]
