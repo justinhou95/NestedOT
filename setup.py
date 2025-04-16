@@ -1,80 +1,91 @@
-from pybind11.setup_helpers import Pybind11Extension, build_ext
-from setuptools import setup, find_packages
-import os
-import platform
-import sys
+from setuptools import setup
 
-__version__ = "0.0.1"
+setup()
 
-# Detect platform and arch
-system = platform.system()
-machine = platform.machine()
+# # import pwd
+# # from pybind11.setup_helpers import Pybind11Extension, build_ext
+# # from setuptools import setup, find_packages
+# # import os
+# # import platform
+# # import sys
 
-# Start with defaults
-extra_compile_args = []
-extra_link_args = []
+# # __version__ = "0.0.1"
 
-if system == "Windows":
-    # MSVC compiler (e.g., Visual Studio)
-    extra_compile_args = ["/openmp"]
-    extra_link_args = []
+# # # Detect platform and arch
+# # system = platform.system()
+# # machine = platform.machine()
 
-elif system == "Linux":
-    extra_compile_args = ["-fopenmp"]
-    extra_link_args = ["-fopenmp"]
+# # # Start with defaults
+# # extra_compile_args = []
+# # extra_link_args = []
 
-elif system == "Darwin":
-    extra_compile_args = ["-Xpreprocessor", "-fopenmp"]
-    extra_link_args = ["-fopenmp", "-lomp"]
+# # if system == "Windows":
+# #     # MSVC compiler (e.g., Visual Studio)
+# #     extra_compile_args = ["/openmp"]
+# #     extra_link_args = []
 
-    # macOS needs extra handling for Apple Clang
-    # Requires: brew install
-    # Use Homebrew's LLVM for proper OpenMP support
+# # elif system == "Linux":
+# #     extra_compile_args = ["-fopenmp"]
+# #     extra_link_args = ["-fopenmp"]
 
-    if machine == "arm64":
-        print("Detected macOS on Apple Silicon (M1/M2/M3)")
-        llvm_root = "/opt/homebrew/opt/llvm"
-    elif machine == "x86_64":
-        print("Detected macOS on Intel")
-        llvm_root = "/usr/local/opt/llvm"
-    else:
-        raise RuntimeError(f"Unsupported machine: {machine}")
+# # elif system == "Darwin":
+# #     extra_compile_args = ["-Xpreprocessor", "-fopenmp"]
+# #     extra_link_args = ["-fopenmp", "-lomp"]
 
-    os.environ["CC"] = f"{llvm_root}/bin/clang"
-    os.environ["CXX"] = f"{llvm_root}/bin/clang++"
+# #     # macOS needs extra handling for Apple Clang
+# #     # Requires: brew install
+# #     # Use Homebrew's LLVM for proper OpenMP support
 
-else:
-    raise RuntimeError(f"Unsupported platform: {system}")
+# #     if machine == "arm64":
+# #         print("Detected macOS on Apple Silicon (M1/M2/M3)")
+# #         llvm_root = "/opt/homebrew/opt/llvm"
+# #     elif machine == "x86_64":
+# #         print("Detected macOS on Intel")
+# #         llvm_root = "/usr/local/opt/llvm"
+# #     else:
+# #         raise RuntimeError(f"Unsupported machine: {machine}")
 
-include_dirs = ["extern/eigen", "./src/include"]
+# #     os.environ["CC"] = f"{llvm_root}/bin/clang"
+# #     os.environ["CXX"] = f"{llvm_root}/bin/clang++"
 
-ext_modules = [
-    Pybind11Extension(
-        "_wrapper",
-        sources=[
-            "src/wrapper.cpp",
-            "src/solver.cpp",
-            "src/emd_wrap.cpp",
-            "src/utils.cpp",
-            "src/printer.cpp",
-        ],
-        define_macros=[("VERSION_INFO", __version__)],
-        include_dirs=include_dirs,
-        extra_compile_args=extra_compile_args,
-        extra_link_args=extra_link_args,
-    )
-]
+# # else:
+# #     raise RuntimeError(f"Unsupported platform: {system}")
 
-setup(
-    name="pnot",
-    version=__version__,
-    author="Ruben Bontorno & Songyan Hou",
-    description="Nested Optimal Transport",
-    long_description="",
-    ext_modules=ext_modules,
-    packages=find_packages(),
-    extras_require={"test": "pytest"},
-    cmdclass={"build_ext": build_ext},
-    zip_safe=False,
-    python_requires=">=3.7",
-)
+
+# # project_root = os.path.abspath(os.path.dirname(__file__))
+# # include_dirs = [
+# #     os.path.join(project_root, "extern/eigen"),
+# #     os.path.join(project_root, "src/include"),
+# # ]
+# # # include_dirs = ["./extern/eigen", "./src/include"]
+
+# # ext_modules = [
+# #     Pybind11Extension(
+# #         "_wrapper",
+# #         sources=[
+# #             "src/wrapper.cpp",
+# #             "src/solver.cpp",
+# #             "src/emd_wrap.cpp",
+# #             "src/utils.cpp",
+# #             "src/printer.cpp",
+# #         ],
+# #         define_macros=[("VERSION_INFO", __version__)],
+# #         include_dirs=include_dirs,
+# #         extra_compile_args=extra_compile_args,
+# #         extra_link_args=extra_link_args,
+# #     )
+# # ]
+
+# # setup(
+# #     name="pnot",
+# #     version=__version__,
+# #     author="Ruben Bontorno & Songyan Hou",
+# #     description="Nested Optimal Transport",
+# #     long_description="",
+# #     ext_modules=ext_modules,
+# #     packages=find_packages(),
+# #     extras_require={"test": "pytest"},
+# #     cmdclass={"build_ext": build_ext},
+# #     zip_safe=False,
+# #     python_requires=">=3.7",
+# # )
