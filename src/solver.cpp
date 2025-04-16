@@ -6,7 +6,7 @@
 #include "header_dist.h"
 
 
-Eigen::MatrixXd path2adaptedpath(const Eigen::MatrixXd& samples, double delta_n);
+Eigen::MatrixXd path2adaptedpath(const Eigen::MatrixXd& samples, double grid_size);
 
 void v_set_add(const Eigen::MatrixXd& mat, std::set<double>& unique_set);
 
@@ -17,6 +17,7 @@ Eigen::MatrixXi sort_qpath(const Eigen::MatrixXi& path);
 std::vector<std::map<std::vector<int>, std::map<int, int>>> qpath2mu_x(Eigen::MatrixXi& qpath, const bool& markovian);
 
 std::vector<ConditionalDistribution> mu_x2kernel_x(std::vector<std::map<std::vector<int>, std::map<int, int>>>& mu_x);
+
 
 int EMD_wrap(int n1, int n2, double *X, double *Y, double *D, double *G,
     double* alpha, double* beta, double *cost, uint64_t maxIter);
@@ -98,15 +99,31 @@ double SolveOT(std::vector<double>& wx, std::vector<double>& wy, std::vector<std
 }
 
 
-double Nested(Eigen::MatrixXd& X, Eigen::MatrixXd& Y, double& delta_n, const bool& markovian){
-    // Add p 
-    // Add thread 
-    // grid size
+
+
+// Parameters:
+//   X, Y         : Input paths (each row is a time step, columns are samples)
+//   grid_size    : Grid size used for adapting/quantizing the paths.
+//   markovian    : Switch between markovian (true) and full history (false) processing.
+//   num_threads  : Number of threads to use (if <= 0, maximum available threads are used).
+//   power        : Exponent for the cost function (only power 1 and 2 are optimized here).
+double Nested(Eigen::MatrixXd& X,
+    Eigen::MatrixXd& Y,
+    double grid_size,
+    const bool& markovian,
+    int num_threads,
+    const int power)
+{
+
+    // Determine number of threads.
+    if (num_threads <= 0) {
+        num_threads = omp_get_max_threads();
+    }
 
     int T = X.rows()-1;
     int n_sample = X.cols();
-    Eigen::MatrixXd adaptedX = path2adaptedpath(X, delta_n);
-    Eigen::MatrixXd adaptedY = path2adaptedpath(Y, delta_n);
+    Eigen::MatrixXd adaptedX = path2adaptedpath(X, grid_size);
+    Eigen::MatrixXd adaptedY = path2adaptedpath(Y, grid_size);
 
     std::set<double> v_set;
     v_set_add(adaptedX, v_set);
@@ -146,19 +163,35 @@ double Nested(Eigen::MatrixXd& X, Eigen::MatrixXd& Y, double& delta_n, const boo
         V[t] = std::vector<std::vector<double>>(kernel_x[t].nc, std::vector<double>(kernel_y[t].nc, 0.0f));
     }
 
-    std::vector<std::vector<double>> cost_matrix(q2v.size(), std::vector<double>(q2v.size(), 0.0f));
-    for (int i = 0; i < q2v.size(); i++){
-        for (int j = 0; j < q2v.size(); j++){
-            cost_matrix[i][j] = (q2v[i] - q2v[j]) * (q2v[i] - q2v[j]);
+
+    // Preselect the cost function.
+    // For performance we handle only power 1 and 2 here (the inner loop will only access the cost matrix).
+    std::function<double(double)> cost_func;
+    if (power == 1) {
+        cost_func = [](double diff) { return std::abs(diff); };
+    } else if (power == 2) {
+        cost_func = [](double diff) { return diff * diff; };
+    } else {
+        // Fallback (this branch will be used infrequently).
+        cost_func = [power](double diff) { return std::pow(std::abs(diff), power); };
+    }
+
+    // Precompute the cost matrix (base cost between quantized values).
+    std::vector<std::vector<double>> cost_matrix(q2v.size(), std::vector<double>(q2v.size(), 0.0));
+    for (int i = 0; i < (int)q2v.size(); i++) {
+        for (int j = 0; j < (int)q2v.size(); j++) {
+            double diff = q2v[i] - q2v[j];
+            cost_matrix[i][j] = cost_func(diff);
         }
     }
+
 
     auto start = std::chrono::steady_clock::now();
 
     for (int t = T - 1; t >= 0; t--){
         std::cout << "Timestep " << t << std::endl;
         std::cout << "Computing " <<  kernel_x[t].nc * kernel_y[t].nc << " OTs ......." << std::endl;
-        #pragma omp parallel for num_threads(8) if(kernel_x[t].nc > 100)
+        #pragma omp parallel for num_threads(num_threads) if(kernel_x[t].nc > 100)
         for (int ix = 0; ix < kernel_x[t].nc; ix++){
             for (int iy = 0; iy < kernel_y[t].nc; iy++){
                 // Reference with shorter names

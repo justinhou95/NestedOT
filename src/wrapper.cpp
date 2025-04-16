@@ -7,22 +7,32 @@
 
 namespace py = pybind11;
 
-double Nested(Eigen::MatrixXd& X, Eigen::MatrixXd& Y, double& delta_n, const bool& markovian);
+// Forward-declare our Nested function.
+double Nested(Eigen::MatrixXd& X, Eigen::MatrixXd& Y, double grid_size, const bool& markovian, int num_threads, const int power);
 
-double NestedBindToPython(Eigen::MatrixXd& X, Eigen::MatrixXd& Y, double& delta_n, const bool& markovian){
+// A simple wrapper function to redirect C++ std::cout to Python's stdout.
+double NestedPython(Eigen::MatrixXd& X, Eigen::MatrixXd& Y, double grid_size, const bool& markovian, int num_threads = -1, const int power = 2) {
     py::scoped_ostream_redirect stream(
-        std::cout,                               // std::ostream&
-        py::module_::import("sys").attr("stdout") // Python stdout
+        std::cout,                               // redirect C++ ostream
+        py::module_::import("sys").attr("stdout") // to Python stdout
     );
-    return Nested(X, Y, delta_n, markovian);
+    return Nested(X, Y, grid_size, markovian, num_threads, power);
 }
 
-
 PYBIND11_MODULE(_wrapper, m) {
-    m.doc() = R"pbdoc(pnot)pbdoc";
+    m.doc() = R"pbdoc(
+        pnot OT Module
+    )pbdoc";
 
-    m.def("nested_ot_solver", &NestedBindToPython, R"pbdoc(
-        Nested OT
+    m.def("nested_ot_solver", &NestedPython, R"pbdoc(
+        Nested optimal transport solver.
+        Parameters:
+          X, Y        : Input paths (Eigen::MatrixXd)
+          grid_size   : Grid size (double)
+          markovian   : Whether to use markovian processing (bool)
+          num_threads : Number of threads (int; if <=0, max available threads are used)
+          power       : Exponent for cost function (int, typically 1 or 2)
+        Returns:
+          Adapted Wasserstein squared distance (double)
     )pbdoc");
-
 }

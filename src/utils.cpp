@@ -35,11 +35,11 @@ Eigen::MatrixXd Lmatrix2paths(
     return X_extended;
 }
 
-Eigen::MatrixXd path2adaptedpath(const Eigen::MatrixXd& X, double delta_n) {
+Eigen::MatrixXd path2adaptedpath(const Eigen::MatrixXd& X, double grid_size) {
     Eigen::MatrixXd adaptedX = X;
     for (int i = 0; i < adaptedX.rows(); ++i) {
         for (int j = 0; j < adaptedX.cols(); ++j) {
-            adaptedX(i, j) = std::floor(X(i, j) / delta_n + 0.5) * delta_n;
+            adaptedX(i, j) = std::floor(X(i, j) / grid_size + 0.5) * grid_size;
         }
     }
     return adaptedX;
