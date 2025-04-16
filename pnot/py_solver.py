@@ -73,14 +73,16 @@ def chunk_process(arg):
     return Vt
 
 
-def nested_parallel(kernel_x: ConditionalLaw, kernel_y: ConditionalLaw, cost_matrix):
+def nested_parallel(
+    kernel_x: ConditionalLaw, kernel_y: ConditionalLaw, cost_matrix, num_threads
+):
     assert kernel_x.T == kernel_y.T
     T = kernel_x.T
     V = [
         np.zeros([kernel_x.nc[t], kernel_y.nc[t]]) for t in range(T)
     ]  # V_t(x_{1:t},y_{1:t})
     for t in range(T - 1, -1, -1):
-        n_processes = 8 if t > 0 else 1
+        n_processes = num_threads if t > 0 else 1
         chunks = np.array_split(range(kernel_x.nc[t]), n_processes)
         args = []
         for chunk in chunks:
@@ -114,30 +116,39 @@ def nested_parallel(kernel_x: ConditionalLaw, kernel_y: ConditionalLaw, cost_mat
     return nested_ot_value
 
 
-def nested_ot_solver_py(X, Y, delta_n, markovian, parallel):
-    adaptedX = path2adaptedpath(X, delta_n)
-    adaptedY = path2adaptedpath(Y, delta_n)
+def nested_ot_solver_py(X, Y, grid_size, markovian, parallel, num_threads=8, power=2):
+    # 1. Adapt the paths.
+    adaptedX = path2adaptedpath(X, grid_size)
+    adaptedY = path2adaptedpath(Y, grid_size)
 
-    # Quantization map
+    # 2. Create the quantization map.
     q2v = np.unique(np.concatenate([adaptedX, adaptedY], axis=0))
     v2q = {k: v for v, k in enumerate(q2v)}  # Value to Quantization
 
-    # Quantized paths
+    # 3. Quantize the paths.
     qX = np.array([[v2q[x] for x in y] for y in adaptedX])
     qY = np.array([[v2q[x] for x in y] for y in adaptedY])
 
-    # Sort paths and transpose to (n_sample, T+1)
+    # 4. Sort the quantized paths and transpose them to shape (n_sample, T+1).
     qX = sort_qpath(qX.T)
     qY = sort_qpath(qY.T)
 
-    cost_matrix = np.square(q2v[:, None] - q2v[None, :])
+    # 5. Precompute cost matrix.
+    # For power 1 and 2 we use optimized routines.
+    if power == 1:
+        cost_matrix = np.abs(q2v[:, None] - q2v[None, :])
+    elif power == 2:
+        cost_matrix = np.square(q2v[:, None] - q2v[None, :])
+    else:
+        cost_matrix = np.power(np.abs(q2v[:, None] - q2v[None, :]), power)
 
+    # 6. Compute the marginal distributions.
     kernel_x = ConditionalLaw(qX, markovian)
     kernel_y = ConditionalLaw(qY, markovian)
 
     start_time = time.perf_counter()
     if parallel:
-        nested_ot_value = nested_parallel(kernel_x, kernel_y, cost_matrix)
+        nested_ot_value = nested_parallel(kernel_x, kernel_y, cost_matrix, num_threads)
     else:
         nested_ot_value = nested(kernel_x, kernel_y, cost_matrix)
 

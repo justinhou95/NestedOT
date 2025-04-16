@@ -20,9 +20,13 @@ def test_1():
     from pnot.py_solver import nested_ot_solver_py
 
     for markovian in [True, False]:
-        v1 = nested_ot_solver_py(X, Y, grid_size, markovian, parallel=True)
-        v2 = nested_ot_solver_py(X, Y, grid_size, markovian, parallel=True)
-        v3 = nested_ot(X, Y, grid_size, markovian)
+        v1 = nested_ot_solver_py(
+            X, Y, grid_size, markovian, parallel=False, num_threads=4, power=2
+        )
+        v2 = nested_ot_solver_py(
+            X, Y, grid_size, markovian, parallel=True, num_threads=4, power=2
+        )
+        v3 = nested_ot(X, Y, grid_size, markovian, num_threads=4, power=2)
         print(np.abs(v1 - v2))
         print(np.abs(v2 - v3))
         assert np.abs(v1 - v2) < 1e-10
