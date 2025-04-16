@@ -17,7 +17,7 @@ def test_1():
 
     grid_size = 0.1
 
-    from pnot.solver import nested_ot_solver_py
+    from pnot.py_solver import nested_ot_solver_py
 
     for markovian in [True, False]:
         v1 = nested_ot_solver_py(X, Y, grid_size, markovian, parallel=True)
