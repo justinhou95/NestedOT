@@ -7,9 +7,10 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pnot"
-version = "0.0.1"
+version = "0.0.9"
 authors = [
-  { name="Songyan Hou & Ruben Bontorno", email="justinhou95@gmail.com" },
+  { name="Songyan Hou", email="justinhou95@gmail.com" },
+  { name="RubenBontorno", email="rbontorno@student.ethz.ch"}
 ]
 description = "Python package for nested optimal transport"
 readme = "README.md"
@@ -19,6 +20,8 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 license = "MIT"
+
+dependencies = ["numpy", "tqdm", "pot"]
 
 [project.urls]
 Homepage = "https://github.com/justinhou95/NestedOT"

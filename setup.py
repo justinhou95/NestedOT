@@ -4,8 +4,6 @@ import os
 import platform
 import sys
 
-__version__ = "0.0.1"
-
 # Detect platform and arch
 system = platform.system()
 machine = platform.machine()
@@ -58,7 +56,6 @@ ext_modules = [
             "src/utils.cpp",
             "src/printer.cpp",
         ],
-        define_macros=[("VERSION_INFO", __version__)],
         include_dirs=include_dirs,
         extra_compile_args=extra_compile_args,
         extra_link_args=extra_link_args,
@@ -66,15 +63,11 @@ ext_modules = [
 ]
 
 setup(
-    name="pnot",
-    version=__version__,
-    author="Ruben Bontorno & Songyan Hou",
-    description="Nested Optimal Transport",
-    long_description="",
     ext_modules=ext_modules,
     packages=find_packages(),
     extras_require={"test": "pytest"},
     cmdclass={"build_ext": build_ext},
     zip_safe=False,
     python_requires=">=3.7",
+    install_requires=["numpy", "tqdm", "pot"],
 )

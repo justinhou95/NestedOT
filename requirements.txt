@@ -1,6 +1,9 @@
 jupyter 
 notebook
-numpy
 matplotlib
+
+numpy
 pot
 tqdm
+
+pytest
