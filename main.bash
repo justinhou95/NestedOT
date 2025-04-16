@@ -1,1 +1,0 @@
-pip install . && python tests/test.py
