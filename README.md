@@ -1,4 +1,4 @@
-# PNOT Python Nested Optimal Transport 🚀
+## PNOT: Python Nested Optimal Transport 🪆
 
 This library implements very fast C++ and Python solver of nested (adapted) optimal transport problem. In particular, it calculate the adapted Wasserstein distance fast and accurately. We provide both C++ and Python implementation, and a wrapper to use the fast C++ solver with Python. This solver is very easy to use and all you need to do if feeding two paths distribution into the solver function and the solver will do all the adapted empirical measures, quantization, and nested computation for you.
 
