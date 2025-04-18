@@ -5,10 +5,21 @@
 #include "EMD.h"
 #include <cstdint>
 
-/* 
-* Please give relevant credit to the original author (Nicolas Bonneel) if
-* you use this code for a publication.
-*/
+/* This file is a c++ wrapper function for computing the transportation cost
+ * between two vectors given a cost matrix.
+ * 
+ * It was copied from https://github.com/PythonOT/POT/blob/master/ot/lp/EMD_wrapper.cpp
+ *
+ * It was written by Antoine Rolet (2014) and mainly consists of a wrapper
+ * of the code written by Nicolas Bonneel available on this page
+ *          http://people.seas.harvard.edu/~nbonneel/FastTransport/
+ *
+ * It was then modified to make it more amenable to python inline calling
+ *
+ * Please give relevant credit to the original author (Nicolas Bonneel) if
+ * you use this code for a publication.
+ *
+ */
  
 int EMD_wrap(int n1, int n2, double *X, double *Y, double *D, double *G,
                 double* alpha, double* beta, double *cost, uint64_t maxIter)  {
