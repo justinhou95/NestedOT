@@ -17,19 +17,18 @@ $ brew install llvm
 $ brew install libomp
 ```
 
-### Install options
+### Installation
 There are few options for installation:
 
-1. Install the stable version via pip:
+Install the stable version via pip:
 ```bash
 $ pip install pnot==1.0.0
 ``` 
-1. Install the latest github version:
-
+Install the latest github version:
 ```bash
 $ pip install git+https://github.com/justinhou95/NestedOT.git
 ``` 
-3. Clone the github repo for development to access to tests, tutorials and scripts and install in [develop mode](https://setuptools.pypa.io/en/latest/userguide/development_mode.html):
+Clone the github repo for development to access to tests, tutorials and scripts and install in [develop mode](https://setuptools.pypa.io/en/latest/userguide/development_mode.html):
 ```bash
 $ git clone https://github.com/justinhou95/NestedOT.git
 ```
@@ -39,9 +38,9 @@ $ pip install -e .
 ``` 
 
 ## Notebooks
-- [demo.ipynb] shows quickstart using PNOT to compute nested distance
-- [solver_explain.ipynb] explains how the conditional distributions are estimated and how nested computing works.
-- [exemple_of_use.ipynb] shows how to use it in practice.
+- [demo.ipynb](https://github.com/justinhou95/NestedOT/blob/main/notebooks/demo.ipynb) shows quickstart using PNOT to compute nested distance
+- [solver_explain.ipynb](https://github.com/justinhou95/NestedOT/blob/main/notebooks/solver_explain.ipynb) explains how the conditional distributions are estimated and how nested computing works.
+- [exemple_of_use.ipynb](https://github.com/justinhou95/NestedOT/blob/main/notebooks/exemple_of_use.ipynb) shows how to use it in practice.
 
 
 ## Reference
