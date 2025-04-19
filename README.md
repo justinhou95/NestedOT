@@ -22,7 +22,7 @@ There are few options for installation:
 
 Install the stable version via pip:
 ```bash
-$ pip install pnot==1.0.0
+$ pip install pnot
 ``` 
 Install the latest github version:
 ```bash
