@@ -1,7 +1,9 @@
 #include <iostream>
 #include <vector>
 #include <Eigen/Dense>
+#include <chrono>
 #include <set>
+#include <omp.h> 
 #include <map>
 #include "header_dist.h"
 
@@ -22,208 +24,260 @@ std::vector<ConditionalDistribution> mu_x2kernel_x(std::vector<std::map<std::vec
 int EMD_wrap(int n1, int n2, double *X, double *Y, double *D, double *G,
     double* alpha, double* beta, double *cost, uint64_t maxIter);
 
-std::vector<std::vector<double>> SquareCost(std::vector<int>& vx, std::vector<int>& vy, std::vector<std::vector<double>>& cost_matrix){
-    int m = vx.size();
-    int n = vy.size();
-    std::vector<std::vector<double>> cost(m, std::vector<double>(n, 0.0f));
-    for(int i = 0; i < m; i++){
-        for(int j = 0; j < n; j++){
-            cost[i][j] = cost_matrix[vx[i]][vy[j]];
-        }
-    }
-    return cost;
-}
-
-void AddDppValue(std::vector<std::vector<double>>& cost, std::vector<std::vector<double>>& Vtplus, int& i0, int& j0){
-    int m = cost.size();
-    int n = cost[0].size();
-    for(int i=0;i<m;i++){
-        for(int j=0;j<n;j++){
-            cost[i][j] += Vtplus[i0+i][j0+j];
-        }
-    }
-}
-
-void AddDppValue_markovian(
-    std::vector<std::vector<double>>& cost, 
-    std::vector<std::vector<double>>& Vtplus, 
-    std::vector<int>& x_next_idx,
-    std::vector<int>& y_next_idx){
-    int m = cost.size();
-    int n = cost[0].size();
-    for(int i=0;i<m;i++){
-        for(int j=0;j<n;j++){
-            cost[i][j] += Vtplus[x_next_idx[i]][y_next_idx[j]];
-        }
-    }
-}
 
 
-double SolveOT(std::vector<double>& wx, std::vector<double>& wy, std::vector<std::vector<double>>& cost){
-    int n1 = wx.size(); 
-    int n2 = wy.size();
-    double c = 0.0;
+// Memory buffers for the EMD solver
+static thread_local std::vector<double> D_buf, G_buf, α_buf, β_buf;
 
-    if (n1 == 1 || n2 == 1){
-        for (int i = 0; i < n1; i++){
-            for (int j = 0; j < n2; j++){
-                c += wx[i] * cost[i][j] * wy[j];
+// flattened OT‐wrapper for Markovian case:
+double SolveOT_flat(
+    const std::vector<double>& wx,
+    const std::vector<double>& wy,
+    const std::vector<std::vector<double>>& cost_matrix,
+    const std::vector<int>& vx,
+    const std::vector<int>& vy,
+    const std::vector<int>* x_next_idx,   // nullptr if t==T-1
+    const std::vector<int>* y_next_idx,   // nullptr if t==T-1
+    const std::vector<std::vector<double>>& Vtplus, // empty if t==T-1
+    uint64_t maxIter = 100000
+) {
+    int n1 = wx.size(), n2 = wy.size();
+    int sz = n1 * n2;
+
+    // resize our buffers once per thread
+    D_buf.resize(sz);
+    G_buf.resize(sz);
+    α_buf.resize(n1);
+    β_buf.resize(n2);
+
+    // fill D_buf as a single flat loop
+    for (int i = 0; i < n1; ++i) {
+        const int vi = vx[i];
+        if (x_next_idx) {
+            int xi = (*x_next_idx)[i];
+            for (int j = 0; j < n2; ++j) {
+                int vj = vy[j];
+                int yj = (*y_next_idx)[j];
+                D_buf[i*n2 + j]
+                  = cost_matrix[vi][vj]
+                  + Vtplus[xi][yj];
+            }
+        } else {
+            for (int j = 0; j < n2; ++j) {
+                int vj = vy[j];
+                D_buf[i*n2 + j] = cost_matrix[vi][vj];
             }
         }
-    } else {
-        double* X = wx.data(); // First marginal histogram 
-        double* Y = wy.data(); // Second marginal histogram
-        double* C = new double[n1 * n2]; // Cost matrix
-        for (int i = 0; i < n1; ++i)
-            for (int j = 0; j < n2; ++j)
-                C[i * n2 + j] = cost[i][j];
-        double* G = new double[n1 * n2]; // Coupling
-        double* alpha = new double[n1]; // First dual potential function  
-        double* beta = new double[n2]; // Second dual potential function          
-        uint64_t maxIter = 100000;
-        
-        int result = EMD_wrap(n1, n2, X, Y, C, G, alpha, beta, &c, maxIter);
-
-        if (result != 1){
-            std::cout << "OT is not solved optimally" << std::endl;
-        } 
-
-        delete[] C;
-        delete[] G;
-        delete[] alpha;
-        delete[] beta;
     }
 
-    return c;
+    // trivial 1×N or N×1 case
+    if (n1 == 1 || n2 == 1) {
+        double c = 0.0;
+        for (int i = 0; i < n1; ++i)
+            for (int j = 0; j < n2; ++j)
+                c += wx[i] * D_buf[i*n2 + j] * wy[j];
+        return c;
+    }
 
+    // otherwise call EMD backend
+    double cost_out = 0.0;
+    int res = EMD_wrap(
+      n1, n2,
+      const_cast<double*>(wx.data()),
+      const_cast<double*>(wy.data()),
+      D_buf.data(), G_buf.data(),
+      α_buf.data(), β_buf.data(),
+      &cost_out, maxIter
+    );
+    if (res != 1)
+      std::cerr << "WARNING: EMD_wrap did not converge\n";
+    return cost_out;
 }
 
 
+double SolveOT_flat_full(
+    const std::vector<double>& wx,
+    const std::vector<double>& wy,
+    const std::vector<std::vector<double>>& cost_matrix,
+    const std::vector<int>& vx,
+    const std::vector<int>& vy,
+    int i0,                                            // base‑row offset
+    int j0,                                            // base‑col offset
+    const std::vector<std::vector<double>>& Vtplus,    // may be EMPTY_TABLE
+    uint64_t maxIter = 100000
+) {
+    int n1 = wx.size(), n2 = wy.size(), sz = n1 * n2;
+    D_buf.resize(sz); G_buf.resize(sz);
+    α_buf.resize(n1); β_buf.resize(n2);
+
+    // fill the flattened cost + future‐DP term
+    for (int i = 0; i < n1; ++i) {
+        int vi = vx[i];
+        for (int j = 0; j < n2; ++j) {
+            int vj = vy[j];
+            D_buf[i*n2 + j] = cost_matrix[vi][vj]
+                              + (!Vtplus.empty() ? Vtplus[i0 + i][j0 + j] : 0.0);
+        }
+    }
+
+    // trivial 1×N or N×1
+    if (n1 == 1 || n2 == 1) {
+        double c = 0.0;
+        for (int i = 0; i < n1; ++i)
+            for (int j = 0; j < n2; ++j)
+                c += wx[i] * D_buf[i*n2 + j] * wy[j];
+        return c;
+    }
+
+    // otherwise EMD_wrap
+    double cost_out = 0.0;
+    int r = EMD_wrap(
+      n1, n2,
+      const_cast<double*>(wx.data()),
+      const_cast<double*>(wy.data()),
+      D_buf.data(), G_buf.data(),
+      α_buf.data(), β_buf.data(),
+      &cost_out, maxIter
+    );
+    if (r != 1) std::cerr<<"EMD_wrap failed\n";
+    return cost_out;
+}
+
+// Empty table for the final step of the backward induction
+static const std::vector<std::vector<double>> EMPTY_TABLE;
 
 
+// REMOVED THE PRINTING HERE!!!
 // Parameters:
 //   X, Y         : Input paths (each row is a time step, columns are samples)
 //   grid_size    : Grid size used for adapting/quantizing the paths.
 //   markovian    : Switch between markovian (true) and full history (false) processing.
 //   num_threads  : Number of threads to use (if <= 0, maximum available threads are used).
 //   power        : Exponent for the cost function (only power 1 and 2 are optimized here).
-double Nested(Eigen::MatrixXd& X,
+double Nested(
+    Eigen::MatrixXd& X,
     Eigen::MatrixXd& Y,
     double grid_size,
     const bool& markovian,
     int num_threads,
-    const int power)
-{
-
-    // Determine number of threads.
-    if (num_threads <= 0) {
-        num_threads = omp_get_max_threads();
-    }
-
-    int T = X.rows()-1;
-    int n_sample = X.cols();
+    const int power
+) {
+    // —————————————————————————————————————————————
+    // 1) simulate/adapt/quantize exactly as before
+    // —————————————————————————————————————————————
+    int T        = X.rows() - 1;
     Eigen::MatrixXd adaptedX = path2adaptedpath(X, grid_size);
     Eigen::MatrixXd adaptedY = path2adaptedpath(Y, grid_size);
 
+    // collect unique grid‑values
     std::set<double> v_set;
     v_set_add(adaptedX, v_set);
     v_set_add(adaptedY, v_set);
 
-    std::map<double, int> v2q; // Map value to quantization e.g. v2q[3.5] = 123
-    std::vector<double> q2v;  // Map quantization to value e.g.  q2v[123] = 3.5
+    // build quantization maps
+    std::map<double,int> v2q;
+    std::vector<double>   q2v;
     int pos = 0;
-    for (double v : v_set) {
-        v2q[v] = pos;
+    for(double v: v_set){
+        v2q[v] = pos++;
         q2v.push_back(v);
-        pos += 1;
     }
 
+    // quantize & lex‐sort
     Eigen::MatrixXi qX = sort_qpath(quantize_path(adaptedX, v2q).transpose());
     Eigen::MatrixXi qY = sort_qpath(quantize_path(adaptedY, v2q).transpose());
 
+    // build the two conditional‐measure kernels
+    auto mu_x = qpath2mu_x(qX, markovian);
+    auto mu_y = qpath2mu_x(qY, markovian);
+    auto kernel_x = mu_x2kernel_x(mu_x);
+    auto kernel_y = mu_x2kernel_x(mu_y);
 
-    // std::cout << qX << std::endl;
-
-    std::vector<std::map<std::vector<int>, std::map<int, int>>> mu_x = qpath2mu_x(qX, markovian);
-    std::vector<std::map<std::vector<int>, std::map<int, int>>> nu_y = qpath2mu_x(qY, markovian);
-
-    // for (int t = 0; t < T; t++){
-    //     print_mu_x(mu_x[t]);
-    // }    
-
-    std::vector<ConditionalDistribution> kernel_x = mu_x2kernel_x(mu_x);
-    std::vector<ConditionalDistribution> kernel_y = mu_x2kernel_x(nu_y);
-
-    // print_kernel_x(kernel_x);
-
-    std::cout << "Start computing" << std::endl;
-
-    std::vector<std::vector<std::vector<double>>> V(T);
-    for(int t=0; t<T; t++){
-        V[t] = std::vector<std::vector<double>>(kernel_x[t].nc, std::vector<double>(kernel_y[t].nc, 0.0f));
-    }
-
-
-    // Preselect the cost function.
-    // For performance we handle only power 1 and 2 here (the inner loop will only access the cost matrix).
-    std::function<double(double)> cost_func;
-    if (power == 1) {
-        cost_func = [](double diff) { return std::abs(diff); };
-    } else if (power == 2) {
-        cost_func = [](double diff) { return diff * diff; };
+    // —————————————————————————————————————————————
+    // 2) precompute base cost_matrix[i][j] = |q2v[i] - q2v[j]|^power
+    // —————————————————————————————————————————————
+    int V = (int)q2v.size();
+    std::vector<std::vector<double>> cost_matrix(V, std::vector<double>(V));
+    if(power == 1){
+        for(int i=0;i<V;i++) for(int j=0;j<V;j++)
+            cost_matrix[i][j] = std::abs(q2v[i] - q2v[j]);
+    } else if(power == 2){
+        for(int i=0;i<V;i++) for(int j=0;j<V;j++){
+            double d = q2v[i] - q2v[j];
+            cost_matrix[i][j] = d*d;
+        }
     } else {
-        // Fallback (this branch will be used infrequently).
-        cost_func = [power](double diff) { return std::pow(std::abs(diff), power); };
-    }
-
-    // Precompute the cost matrix (base cost between quantized values).
-    std::vector<std::vector<double>> cost_matrix(q2v.size(), std::vector<double>(q2v.size(), 0.0));
-    for (int i = 0; i < (int)q2v.size(); i++) {
-        for (int j = 0; j < (int)q2v.size(); j++) {
-            double diff = q2v[i] - q2v[j];
-            cost_matrix[i][j] = cost_func(diff);
+        for(int i=0;i<V;i++) for(int j=0;j<V;j++){
+            cost_matrix[i][j] = std::pow(std::abs(q2v[i] - q2v[j]), (double)power);
         }
     }
 
+    // —————————————————————————————————————————————
+    // 3) allocate the value‐function table V[t][ix][iy]
+    // —————————————————————————————————————————————
+    std::vector<std::vector<std::vector<double>>> Vfunc(T);
+    for(int t=0; t<T; t++){
+        int nx = kernel_x[t].nc, ny = kernel_y[t].nc;
+        Vfunc[t].assign(nx, std::vector<double>(ny, 0.0));
+    }
 
-    auto start = std::chrono::steady_clock::now();
+    // —————————————————————————————————————————————
+    // 4) set up OpenMP
+    // —————————————————————————————————————————————
+    if(num_threads <= 0) 
+        num_threads = omp_get_max_threads();
+    else
+        num_threads = std::min(num_threads, omp_get_max_threads());
+    omp_set_num_threads(num_threads);
 
-    for (int t = T - 1; t >= 0; t--){
-        std::cout << "Timestep " << t << std::endl;
-        std::cout << "Computing " <<  kernel_x[t].nc * kernel_y[t].nc << " OTs ......." << std::endl;
-        #pragma omp parallel for num_threads(num_threads) if(kernel_x[t].nc > 100)
-        for (int ix = 0; ix < kernel_x[t].nc; ix++){
-            for (int iy = 0; iy < kernel_y[t].nc; iy++){
-                // Reference with shorter names
-                std::vector<int>& vx = kernel_x[t].dists[ix].values;
-                std::vector<int>& vy = kernel_y[t].dists[iy].values;
-                std::vector<double>& wx = kernel_x[t].dists[ix].weights;
-                std::vector<double>& wy = kernel_y[t].dists[iy].weights;
-                
-                std::vector<std::vector<double>> cost = SquareCost(vx, vy, cost_matrix);
-                if (t < T - 1){
-                    if (markovian){
-                        std::vector<int>& x_next_idx = kernel_x[t].next_idx[ix];
-                        std::vector<int>& y_next_idx = kernel_y[t].next_idx[iy];
-                        AddDppValue_markovian(cost, V[t + 1], x_next_idx, y_next_idx);
-                    } else {
-                        int& i0 = kernel_x[t].nv_cums[ix];
-                        int& j0 = kernel_y[t].nv_cums[iy];
-                        AddDppValue(cost, V[t + 1], i0, j0);
-                    }
-                }
-                V[t][ix][iy] = SolveOT(wx, wy, cost);
+    // —————————————————————————————————————————————
+    // 5) backward‐induction in ONE parallel region
+    // —————————————————————————————————————————————
+    #pragma omp parallel
+    {
+      for (int t = T - 1; t >= 0; --t) {
+        #pragma omp for collapse(2) schedule(dynamic)
+        for (int ix = 0; ix < kernel_x[t].nc; ++ix) {
+          for (int iy = 0; iy < kernel_y[t].nc; ++iy) {
+            auto &dx = kernel_x[t].dists[ix];
+            auto &dy = kernel_y[t].dists[iy];
+
+            // If markovian: grab the next‐idx lists; else nullptr
+            const std::vector<int>* x_idx = nullptr;
+            const std::vector<int>* y_idx = nullptr;
+            if (markovian && t < T - 1) {
+              x_idx = &kernel_x[t].next_idx[ix];
+              y_idx = &kernel_y[t].next_idx[iy];
             }
+
+            // Choose which solver to call
+            if (markovian) {
+              // for final step, pass EMPTY_TABLE as Vnext
+              const auto& Vnext = (t < T - 1 ? Vfunc[t+1] : EMPTY_TABLE);
+              Vfunc[t][ix][iy] = SolveOT_flat(
+                dx.weights, dy.weights,
+                cost_matrix,
+                dx.values, dy.values,
+                x_idx, y_idx,
+                Vnext
+              );
+            } else {
+              // full‐history: compute base offsets i0,j0
+              int i0 = kernel_x[t].nv_cums[ix];
+              int j0 = kernel_y[t].nv_cums[iy];
+              const auto& Vnext = (t < T - 1 ? Vfunc[t+1] : EMPTY_TABLE);
+              Vfunc[t][ix][iy] = SolveOT_flat_full(
+                dx.weights, dy.weights,
+                cost_matrix,
+                dx.values, dy.values,
+                i0, j0,
+                Vnext
+              );
+            }
+          }
         }
-    }
+      }
+    } // omp parallel
 
-    auto end = std::chrono::steady_clock::now();
-    auto diff = end - start;
-    std::cout << std::chrono::duration<double, std::milli>(diff).count()/1000. << " seconds" << std::endl;
-
-    double AW2 = V[0][0][0];
-    std::cout << "AW_2^2: " << AW2 << std::endl;
-    std::cout << "Finish" << std::endl;
-
-    return AW2;
+    return Vfunc[0][0][0];
 }
