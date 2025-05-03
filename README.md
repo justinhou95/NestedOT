@@ -43,7 +43,11 @@ We compare **PNOT’s** C++ `nested_ot` solver against the only publicly availa
 
 - **Sample sizes**: 100, 200, 300, 500, 1000 (5 runs each)  
 - **Matrices**: L and M (shown below) are lower-triangular Cholesky factors used to generate zero-mean Gaussian path distributions:
-  \[ L = \begin{pmatrix} 1 & 0 & 0 & 0\\ 2 & 2 & 0 & 0\\ 1 & 1 & 3 & 0\\ 2 & 2 & 1 & 2 \end{pmatrix}, \quad M = \begin{pmatrix} 1 & 0 & 0 & 0\\ 2 & 1 & 0 & 0\\ 3 & 2 & 1 & 0\\ 4 & 3 & 2 & 1 \end{pmatrix} \]  
+
+$$
+L = \begin{pmatrix} 1 & 0 & 0 & 0\\ 2 & 2 & 0 & 0\\ 1 & 1 & 3 & 0\\ 2 & 2 & 1 & 2 \end{pmatrix}, \quad M = \begin{pmatrix} 1 & 0 & 0 & 0\\ 2 & 1 & 0 & 0\\ 3 & 2 & 1 & 0\\ 4 & 3 & 2 & 1 \end{pmatrix} 
+$$
+
 - **Grid size**: \(\delta=0.2\), **cost exponent**: \(p=2\)
 
 | Sample \(n\) | C++ time (mean ± std) [s] | AOTNumerics `solve_dynamic` [s] | Speed‑up (×)  |

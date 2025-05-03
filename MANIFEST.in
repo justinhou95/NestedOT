@@ -1,0 +1,6 @@
+recursive-include src *.cpp
+recursive-include src *.h
+recursive-include src *.hpp
+recursive-include extern *
+
+include README.md

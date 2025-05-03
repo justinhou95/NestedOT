@@ -1,22 +1,32 @@
 [build-system]
 requires = [
-    "setuptools>=42",
+    "setuptools >= 77.0.3",
     "pybind11>=2.10.0",
 ]
 build-backend = "setuptools.build_meta"
 
-[tool.cibuildwheel]
-test-command = "python {project}/tests/test.py"
-test-skip = "*universal2:arm64"
-
-[tool.ruff]
-target-version = "py37"
-
-[tool.ruff.lint]
-extend-select = [
-  "B",   # flake8-bugbear
-  "I",   # isort
-  "PGH", # pygrep-hooks
-  "RUF", # Ruff-specific
-  "UP",  # pyupgrade
+[project]
+name = "pnot"
+version = "0.1.0"
+authors = [
+  { name="Songyan Hou", email="justinhou95@gmail.com" },
+  { name="RubenBontorno", email="rbontorno@student.ethz.ch"}
 ]
+description = "Python package for nested optimal transport"
+readme = "README.md"
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+]
+license = "MIT"
+
+dependencies = ["numpy", "tqdm", "pot"]
+
+[project.urls]
+Homepage = "https://github.com/justinhou95/NestedOT"
+
+[project.optional-dependencies]
+test = ["pytest"]
+
+

@@ -95,30 +95,31 @@ double SolveOT_flat(
 }
 
 
-double SolveOT_flat_full(
-    const std::vector<double>& wx,
-    const std::vector<double>& wy,
-    const std::vector<std::vector<double>>& cost_matrix,
-    const std::vector<int>& vx,
-    const std::vector<int>& vy,
-    int i0,                                            // base‑row offset
-    int j0,                                            // base‑col offset
-    const std::vector<std::vector<double>>& Vtplus,    // may be EMPTY_TABLE
-    uint64_t maxIter = 100000
-) {
-    int n1 = wx.size(), n2 = wy.size(), sz = n1 * n2;
-    D_buf.resize(sz); G_buf.resize(sz);
-    α_buf.resize(n1); β_buf.resize(n2);
 
-    // fill the flattened cost + future‐DP term
-    for (int i = 0; i < n1; ++i) {
-        int vi = vx[i];
-        for (int j = 0; j < n2; ++j) {
-            int vj = vy[j];
-            D_buf[i*n2 + j] = cost_matrix[vi][vj]
-                              + (!Vtplus.empty() ? Vtplus[i0 + i][j0 + j] : 0.0);
-        }
+
+// Parameters:
+//   X, Y         : Input paths (each row is a time step, columns are samples)
+//   grid_size    : Grid size used for adapting/quantizing the paths.
+//   markovian    : Switch between markovian (true) and full history (false) processing.
+//   num_threads  : Number of threads to use (if <= 0, maximum available threads are used).
+//   power        : Exponent for the cost function (only power 1 and 2 are optimized here).
+double Nested(Eigen::MatrixXd& X,
+    Eigen::MatrixXd& Y,
+    double grid_size,
+    const bool& markovian,
+    int num_threads,
+    const int power)
+{
+
+    // Determine number of threads.
+    if (num_threads <= 0) {
+        num_threads = omp_get_max_threads();
     }
+
+    int T = X.rows()-1;
+    int n_sample = X.cols();
+    Eigen::MatrixXd adaptedX = path2adaptedpath(X, grid_size);
+    Eigen::MatrixXd adaptedY = path2adaptedpath(Y, grid_size);
 
     // trivial 1×N or N×1
     if (n1 == 1 || n2 == 1) {
@@ -221,33 +222,56 @@ double Nested(
         Vfunc[t].assign(nx, std::vector<double>(ny, 0.0));
     }
 
-    // —————————————————————————————————————————————
-    // 4) set up OpenMP
-    // —————————————————————————————————————————————
-    if(num_threads <= 0) 
-        num_threads = omp_get_max_threads();
-    else
-        num_threads = std::min(num_threads, omp_get_max_threads());
-    omp_set_num_threads(num_threads);
 
-    // —————————————————————————————————————————————
-    // 5) backward‐induction in ONE parallel region
-    // —————————————————————————————————————————————
-    #pragma omp parallel
-    {
-      for (int t = T - 1; t >= 0; --t) {
-        #pragma omp for collapse(2) schedule(dynamic)
-        for (int ix = 0; ix < kernel_x[t].nc; ++ix) {
-          for (int iy = 0; iy < kernel_y[t].nc; ++iy) {
-            auto &dx = kernel_x[t].dists[ix];
-            auto &dy = kernel_y[t].dists[iy];
+    // Preselect the cost function.
+    // For performance we handle only power 1 and 2 here (the inner loop will only access the cost matrix).
+    std::function<double(double)> cost_func;
+    if (power == 1) {
+        cost_func = [](double diff) { return std::abs(diff); };
+    } else if (power == 2) {
+        cost_func = [](double diff) { return diff * diff; };
+    } else {
+        // Fallback (this branch will be used infrequently).
+        cost_func = [power](double diff) { return std::pow(std::abs(diff), power); };
+    }
 
-            // If markovian: grab the next‐idx lists; else nullptr
-            const std::vector<int>* x_idx = nullptr;
-            const std::vector<int>* y_idx = nullptr;
-            if (markovian && t < T - 1) {
-              x_idx = &kernel_x[t].next_idx[ix];
-              y_idx = &kernel_y[t].next_idx[iy];
+    // Precompute the cost matrix (base cost between quantized values).
+    std::vector<std::vector<double>> cost_matrix(q2v.size(), std::vector<double>(q2v.size(), 0.0));
+    for (int i = 0; i < (int)q2v.size(); i++) {
+        for (int j = 0; j < (int)q2v.size(); j++) {
+            double diff = q2v[i] - q2v[j];
+            cost_matrix[i][j] = cost_func(diff);
+        }
+    }
+
+
+    auto start = std::chrono::steady_clock::now();
+
+    for (int t = T - 1; t >= 0; t--){
+        std::cout << "Timestep " << t << std::endl;
+        std::cout << "Computing " <<  kernel_x[t].nc * kernel_y[t].nc << " OTs ......." << std::endl;
+        #pragma omp parallel for num_threads(num_threads) if(kernel_x[t].nc > 100)
+        for (int ix = 0; ix < kernel_x[t].nc; ix++){
+            for (int iy = 0; iy < kernel_y[t].nc; iy++){
+                // Reference with shorter names
+                std::vector<int>& vx = kernel_x[t].dists[ix].values;
+                std::vector<int>& vy = kernel_y[t].dists[iy].values;
+                std::vector<double>& wx = kernel_x[t].dists[ix].weights;
+                std::vector<double>& wy = kernel_y[t].dists[iy].weights;
+                
+                std::vector<std::vector<double>> cost = SquareCost(vx, vy, cost_matrix);
+                if (t < T - 1){
+                    if (markovian){
+                        std::vector<int>& x_next_idx = kernel_x[t].next_idx[ix];
+                        std::vector<int>& y_next_idx = kernel_y[t].next_idx[iy];
+                        AddDppValueMarkovian(cost, V[t + 1], x_next_idx, y_next_idx);
+                    } else {
+                        int& i0 = kernel_x[t].nv_cums[ix];
+                        int& j0 = kernel_y[t].nv_cums[iy];
+                        AddDppValue(cost, V[t + 1], i0, j0);
+                    }
+                }
+                V[t][ix][iy] = SolveOT(wx, wy, cost);
             }
 
             // Choose which solver to call
