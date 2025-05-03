@@ -8,7 +8,12 @@ Eigen::MatrixXd Lmatrix2paths(
     int seed = 0
 );
 
-double Nested(Eigen::MatrixXd& X, Eigen::MatrixXd& Y, double& delta_n, const bool& markovian);
+double Nested(Eigen::MatrixXd& X,
+    Eigen::MatrixXd& Y,
+    double grid_size,
+    const bool& markovian,
+    int num_threads,
+    const int power);
 
 int main() {
 
@@ -22,14 +27,23 @@ int main() {
          2, 3, 0,
          3, 1, 2;
 
-    int n_sample = 200;
+    int n_sample = 100;
     Eigen::MatrixXd X = Lmatrix2paths(L, n_sample, true);
     Eigen::MatrixXd Y = Lmatrix2paths(M, n_sample, true);
     const bool markovian = true;
     double delta_n = 0.01;
-    double res = Nested(X, Y, delta_n, markovian);
-    std::cout << "========================================================================" << std::endl;
 
+    bool markovians[2] = {true, false};
+    int num_threads[3] = {0, 1, 16};
+    int ps[3] = {0, 1, 2};
+    for (int p: ps){
+        for (bool markovian: markovians){    
+            for (int num_thread: num_threads){
+                std::cout << "NumtThread: " << num_thread  << "  ploss: " << p << "  Markovian: " << markovian << std::endl;
+                double res = Nested(X, Y, delta_n, markovian, num_thread, p);
+                std::cout << "========================================================================" << std::endl;
+            }
+        }
+    }
 
 }
-
