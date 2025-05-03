@@ -2,6 +2,7 @@ eigen/
 .venv/
 .vscode/
 .DS_Store
+.venvtest/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

@@ -17,7 +17,9 @@ if system == "Darwin":
     compile_args += ["-Xpreprocessor", "-fopenmp"]
     try:
         # Try to get the libomp prefix via brew
-        prefix = subprocess.check_output(["brew", "--prefix", "libomp"]).decode().strip()
+        prefix = (
+            subprocess.check_output(["brew", "--prefix", "libomp"]).decode().strip()
+        )
         libomp_lib_dir = os.path.join(prefix, "lib")
     except Exception:
         # Fallback if brew command fails
@@ -52,7 +54,9 @@ else:
             include_dirs.append(d)
             break
     else:
-        print("Warning: Eigen include directory not found. Please set EIGEN3_INCLUDE_DIR.")
+        print(
+            "Warning: Eigen include directory not found. Please set EIGEN3_INCLUDE_DIR."
+        )
 
 ext_modules = [
     Pybind11Extension(
