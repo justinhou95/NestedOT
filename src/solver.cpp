@@ -151,13 +151,13 @@ double Nested(Eigen::MatrixXd& X,
 
     // for (int t = 0; t < T; t++){
     //     print_mu_x(mu_x[t]);
-    // }    
+    // }   
 
     std::vector<ConditionalDistribution> kernel_x = mu_x2kernel_x(mu_x);
     std::vector<ConditionalDistribution> kernel_y = mu_x2kernel_x(nu_y);
 
     // print_kernel_x(kernel_x);
-    if (verbose){std::cout << "Start computing" << std::endl;}
+    if (verbose){std::cout << "Start computing with " << num_threads << " threads" << std::endl;}
 
     std::vector<std::vector<std::vector<double>>> V(T);
     for(int t=0; t<T; t++){
