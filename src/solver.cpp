@@ -117,108 +117,121 @@ double Nested(Eigen::MatrixXd& X,
     const bool verbose)
 {
 
-    // Determine number of threads.
-    if (num_threads <= 0) {
-        num_threads = omp_get_max_threads();
-    }
-
-    int T = X.rows()-1;
-    int n_sample = X.cols();
+    // —————————————————————————————————————————————
+    // 1) simulate/adapt/quantize exactly as before
+    // —————————————————————————————————————————————
+    int T = X.rows() - 1;
     Eigen::MatrixXd adaptedX = path2adaptedpath(X, grid_size);
     Eigen::MatrixXd adaptedY = path2adaptedpath(Y, grid_size);
 
+    // collect unique grid‑values
     std::set<double> v_set;
     v_set_add(adaptedX, v_set);
     v_set_add(adaptedY, v_set);
 
-    std::map<double, int> v2q; // Map value to quantization e.g. v2q[3.5] = 123
-    std::vector<double> q2v;  // Map quantization to value e.g.  q2v[123] = 3.5
+    // build quantization maps
+    std::map<double,int> v2q;
+    std::vector<double>   q2v;
     int pos = 0;
-    for (double v : v_set) {
-        v2q[v] = pos;
+    for(double v: v_set){
+        v2q[v] = pos++;
         q2v.push_back(v);
-        pos += 1;
     }
 
+    // quantize & lex‐sort
     Eigen::MatrixXi qX = sort_qpath(quantize_path(adaptedX, v2q).transpose());
     Eigen::MatrixXi qY = sort_qpath(quantize_path(adaptedY, v2q).transpose());
 
-
-    // std::cout << qX << std::endl;
-
+    // quantized paths to condition distribution (dict representation)
     std::vector<std::map<std::vector<int>, std::map<int, int>>> mu_x = qpath2mu_x(qX, markovian);
-    std::vector<std::map<std::vector<int>, std::map<int, int>>> nu_y = qpath2mu_x(qY, markovian);
+    std::vector<std::map<std::vector<int>, std::map<int, int>>> nu_y = qpath2mu_x(qY, markovian);   
 
-    // for (int t = 0; t < T; t++){
-    //     print_mu_x(mu_x[t]);
-    // }   
-
+    // condition distribution (dict representation) to condition distribution (list representation)
     std::vector<ConditionalDistribution> kernel_x = mu_x2kernel_x(mu_x);
     std::vector<ConditionalDistribution> kernel_y = mu_x2kernel_x(nu_y);
 
     // print_kernel_x(kernel_x);
     if (verbose){std::cout << "Start computing with " << num_threads << " threads" << std::endl;}
 
+    // —————————————————————————————————————————————
+    // 2) precompute base cost_matrix[i][j] = |q2v[i] - q2v[j]|^power
+    // —————————————————————————————————————————————
+    int lenCostMatrix = q2v.size();
+    std::vector<std::vector<double>> cost_matrix(lenCostMatrix, std::vector<double>(lenCostMatrix));
+
+    if (power == 1) {
+        for (int i = 0; i < lenCostMatrix; ++i)
+            for (int j = 0; j < lenCostMatrix; ++j) {
+                double diff = q2v[i] - q2v[j];
+                cost_matrix[i][j] = std::abs(diff);
+            }
+    } else if (power == 2) {
+        for (int i = 0; i < lenCostMatrix; ++i)
+            for (int j = 0; j < lenCostMatrix; ++j) {
+                double diff = q2v[i] - q2v[j];
+                cost_matrix[i][j] = diff * diff;
+            }
+
+    } else {
+        for (int i = 0; i < lenCostMatrix; ++i)
+            for (int j = 0; j < lenCostMatrix; ++j) {
+                double diff = q2v[i] - q2v[j];
+                cost_matrix[i][j] = std::pow(std::abs(diff), static_cast<double>(power));
+            }
+    }
+
+    // —————————————————————————————————————————————
+    // 3) allocate the value‐function table V[t][ix][iy]
+    // —————————————————————————————————————————————
     std::vector<std::vector<std::vector<double>>> V(T);
     for(int t=0; t<T; t++){
         V[t] = std::vector<std::vector<double>>(kernel_x[t].nc, std::vector<double>(kernel_y[t].nc, 0.0f));
     }
 
-
-    // Preselect the cost function.
-    // For performance we handle only power 1 and 2 here (the inner loop will only access the cost matrix).
-    std::function<double(double)> cost_func;
-    if (power == 1) {
-        cost_func = [](double diff) { return std::abs(diff); };
-    } else if (power == 2) {
-        cost_func = [](double diff) { return diff * diff; };
-    } else {
-        // Fallback (this branch will be used infrequently).
-        cost_func = [power](double diff) { return std::pow(std::abs(diff), power); };
-    }
-
-    // Precompute the cost matrix (base cost between quantized values).
-    std::vector<std::vector<double>> cost_matrix(q2v.size(), std::vector<double>(q2v.size(), 0.0));
-    for (int i = 0; i < (int)q2v.size(); i++) {
-        for (int j = 0; j < (int)q2v.size(); j++) {
-            double diff = q2v[i] - q2v[j];
-            cost_matrix[i][j] = cost_func(diff);
-        }
-    }
-
+    // —————————————————————————————————————————————
+    // 4) set up OpenMP
+    // —————————————————————————————————————————————
+    if(num_threads <= 0) 
+        num_threads = omp_get_max_threads();
+    else
+        num_threads = std::min(num_threads, omp_get_max_threads());
+    omp_set_num_threads(num_threads);
 
     auto start = std::chrono::steady_clock::now();
-
-    for (int t = T - 1; t >= 0; t--){
-        if (verbose){
-        std::cout << "Timestep " << t << std::endl;
-        std::cout << "Computing " <<  kernel_x[t].nc * kernel_y[t].nc << " OTs ......." << std::endl;
-        }
-        #pragma omp parallel for num_threads(num_threads) if(kernel_x[t].nc > 100)
-        for (int ix = 0; ix < kernel_x[t].nc; ix++){
-            for (int iy = 0; iy < kernel_y[t].nc; iy++){
-                // Reference with shorter names
-                std::vector<int>& vx = kernel_x[t].dists[ix].values;
-                std::vector<int>& vy = kernel_y[t].dists[iy].values;
-                std::vector<double>& wx = kernel_x[t].dists[ix].weights;
-                std::vector<double>& wy = kernel_y[t].dists[iy].weights;
-                
-                std::vector<std::vector<double>> cost = SquareCost(vx, vy, cost_matrix);
-                if (t < T - 1){
-                    if (markovian){
-                        std::vector<int>& x_next_idx = kernel_x[t].next_idx[ix];
-                        std::vector<int>& y_next_idx = kernel_y[t].next_idx[iy];
-                        AddDppValueMarkovian(cost, V[t + 1], x_next_idx, y_next_idx);
-                    } else {
-                        int& i0 = kernel_x[t].nv_cums[ix];
-                        int& j0 = kernel_y[t].nv_cums[iy];
-                        AddDppValue(cost, V[t + 1], i0, j0);
+    // #pragma omp parallel
+    // {
+        for (int t = T - 1; t >= 0; t--){
+            if (verbose){
+            std::cout << "Timestep " << t << std::endl;
+            std::cout << "Computing " <<  kernel_x[t].nc * kernel_y[t].nc << " OTs ......." << std::endl;
+            }
+            #pragma omp parallel for num_threads(num_threads) collapse(2) schedule(dynamic) if(kernel_x[t].nc > 100)
+            // #pragma omp for collapse(2) schedule(dynamic)
+            for (int ix = 0; ix < kernel_x[t].nc; ix++){
+                for (int iy = 0; iy < kernel_y[t].nc; iy++){
+                    // Reference with shorter names
+                    std::vector<int>& vx = kernel_x[t].dists[ix].values;
+                    std::vector<int>& vy = kernel_y[t].dists[iy].values;
+                    std::vector<double>& wx = kernel_x[t].dists[ix].weights;
+                    std::vector<double>& wy = kernel_y[t].dists[iy].weights;
+                    
+                    std::vector<std::vector<double>> cost = SquareCost(vx, vy, cost_matrix);
+                    if (t < T - 1){
+                        if (markovian){
+                            std::vector<int>& x_next_idx = kernel_x[t].next_idx[ix];
+                            std::vector<int>& y_next_idx = kernel_y[t].next_idx[iy];
+                            AddDppValueMarkovian(cost, V[t + 1], x_next_idx, y_next_idx);
+                        } else {
+                            int& i0 = kernel_x[t].nv_cums[ix];
+                            int& j0 = kernel_y[t].nv_cums[iy];
+                            AddDppValue(cost, V[t + 1], i0, j0);
+                        }
                     }
+                    V[t][ix][iy] = SolveOT(wx, wy, cost);
                 }
-                V[t][ix][iy] = SolveOT(wx, wy, cost);
             }
         }
-    }
+    // }
 
     auto end = std::chrono::steady_clock::now();
     auto diff = end - start;

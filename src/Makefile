@@ -13,7 +13,7 @@ SRC = $(wildcard *.cpp)
 OUT = main.out
 
 all:
-	$(CXX) $(CXXFLAGS) -g emd_wrap.cpp solver.cpp utils.cpp main.cpp -o main.out $(LDFLAGS) $(LDLIBS)
+	$(CXX) $(CXXFLAGS) -g emd_wrap.cpp solver.cpp solver_memory.cpp utils.cpp main.cpp -o main.out $(LDFLAGS) $(LDLIBS)
 
 clean:
 	rm -f $(OUT)
