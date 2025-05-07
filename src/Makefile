@@ -2,7 +2,7 @@ CXX=/opt/homebrew/opt/llvm/bin/clang++
 
 CXXFLAGS = -std=c++14 -O2 -fopenmp \
            -I./include \
-           -I../eigen \
+           -I../extern \
            -I/opt/homebrew/opt/libomp/include \
 		   -I
 

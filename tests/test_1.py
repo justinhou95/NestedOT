@@ -1,4 +1,5 @@
-def test_1():
+def test_with_python():
+    # Test the correctness of the computation compared with python implementation
     import numpy as np
     from pnot import nested_ot
     from pnot.utils import adapted_wasserstein_squared, matrixL2paths
@@ -34,4 +35,4 @@ def test_1():
 
 
 if __name__ == "__main__":
-    test_1()
+    test_with_python()

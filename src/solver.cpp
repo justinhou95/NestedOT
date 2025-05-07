@@ -107,6 +107,7 @@ double SolveOT(std::vector<double>& wx, std::vector<double>& wy, std::vector<std
 //   markovian    : Switch between markovian (true) and full history (false) processing.
 //   num_threads  : Number of threads to use (if <= 0, maximum available threads are used).
 //   power        : Exponent for the cost function (only power 1 and 2 are optimized here).
+
 double Nested(Eigen::MatrixXd& X,
     Eigen::MatrixXd& Y,
     double grid_size,
