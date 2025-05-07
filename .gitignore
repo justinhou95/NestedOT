@@ -2,6 +2,8 @@
 .vscode/
 .DS_Store
 .venvtest/
+aot_numerics/
+aotnumerics/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

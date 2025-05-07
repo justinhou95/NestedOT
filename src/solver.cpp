@@ -222,10 +222,11 @@ double Nested(Eigen::MatrixXd& X,
 
     auto end = std::chrono::steady_clock::now();
     auto diff = end - start;
-    std::cout << std::chrono::duration<double, std::milli>(diff).count()/1000. << " seconds" << std::endl;
 
     double nested_ot_value = V[0][0][0];
+
     if (verbose){
+        std::cout << std::chrono::duration<double, std::milli>(diff).count()/1000. << " seconds" << std::endl;
         std::cout << "Nested OT value: " << nested_ot_value << std::endl;
         std::cout << "Finish" << std::endl;
     }
