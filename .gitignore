@@ -2,8 +2,7 @@
 .vscode/
 .DS_Store
 .venvtest/
-
-src/Makefile
+aot_numerics/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -212,3 +211,16 @@ cython_debug/
 *.exe
 *.out
 *.app
+
+# Ruben Git ignore
+.ruben_env/
+__pycache__/
+.ipynb_checkpoints/
+*.pyc
+*.pyo
+*.pyd
+*.so
+build/
+dist/
+*.egg-info/
+.DS_Store
