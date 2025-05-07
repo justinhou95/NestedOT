@@ -113,7 +113,8 @@ double Nested(Eigen::MatrixXd& X,
     double grid_size,
     const bool& markovian,
     int num_threads,
-    const int power)
+    const int power,
+    const bool verbose)
 {
 
     // Determine number of threads.
@@ -156,8 +157,7 @@ double Nested(Eigen::MatrixXd& X,
     std::vector<ConditionalDistribution> kernel_y = mu_x2kernel_x(nu_y);
 
     // print_kernel_x(kernel_x);
-
-    std::cout << "Start computing" << std::endl;
+    if (verbose){std::cout << "Start computing" << std::endl;}
 
     std::vector<std::vector<std::vector<double>>> V(T);
     for(int t=0; t<T; t++){
@@ -190,8 +190,10 @@ double Nested(Eigen::MatrixXd& X,
     auto start = std::chrono::steady_clock::now();
 
     for (int t = T - 1; t >= 0; t--){
+        if (verbose){
         std::cout << "Timestep " << t << std::endl;
         std::cout << "Computing " <<  kernel_x[t].nc * kernel_y[t].nc << " OTs ......." << std::endl;
+        }
         #pragma omp parallel for num_threads(num_threads) if(kernel_x[t].nc > 100)
         for (int ix = 0; ix < kernel_x[t].nc; ix++){
             for (int iy = 0; iy < kernel_y[t].nc; iy++){
@@ -223,8 +225,11 @@ double Nested(Eigen::MatrixXd& X,
     std::cout << std::chrono::duration<double, std::milli>(diff).count()/1000. << " seconds" << std::endl;
 
     double nested_ot_value = V[0][0][0];
-    std::cout << "Nested OT value: " << nested_ot_value << std::endl;
-    std::cout << "Finish" << std::endl;
+    if (verbose){
+        std::cout << "Nested OT value: " << nested_ot_value << std::endl;
+        std::cout << "Finish" << std::endl;
+    }
+    
 
     return nested_ot_value;
 }

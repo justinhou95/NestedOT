@@ -27,7 +27,13 @@ def test_threads():
             for num_threads in num_threads_list:
                 print("NumThread: ", num_threads)
                 v = nested_ot(
-                    X, Y, grid_size, markovian, num_threads=num_threads, power=2
+                    X,
+                    Y,
+                    grid_size,
+                    markovian,
+                    num_threads=num_threads,
+                    power=2,
+                    verbose=True,
                 )
                 v_list.append(v)
             for v in v_list:
