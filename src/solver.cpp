@@ -150,9 +150,6 @@ double Nested(Eigen::MatrixXd& X,
     std::vector<ConditionalDistribution> kernel_x = mu_x2kernel_x(mu_x);
     std::vector<ConditionalDistribution> kernel_y = mu_x2kernel_x(nu_y);
 
-    // print_kernel_x(kernel_x);
-    if (verbose){std::cout << "Start computing with " << num_threads << " threads" << std::endl;}
-
     // —————————————————————————————————————————————
     // 2) precompute base cost_matrix[i][j] = |q2v[i] - q2v[j]|^power
     // —————————————————————————————————————————————
@@ -196,6 +193,8 @@ double Nested(Eigen::MatrixXd& X,
     else
         num_threads = std::min(num_threads, omp_get_max_threads());
     omp_set_num_threads(num_threads);
+
+    if (verbose){std::cout << "Start computing with " << num_threads << " threads" << std::endl;}
 
     auto start = std::chrono::steady_clock::now();
     // #pragma omp parallel
