@@ -4,6 +4,7 @@
 .venvtest/
 aot_numerics/
 aotnumerics/
+src/Makefile
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
