@@ -5,6 +5,8 @@
 aot_numerics/
 aotnumerics/
 src/Makefile
+notebook/experiment.ipynb
+
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
