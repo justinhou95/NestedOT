@@ -10,7 +10,7 @@ name = "pnot"
 version = "0.1.2"
 authors = [
   { name="Songyan Hou", email="justinhou95@gmail.com" },
-  { name="RubenBontorno", email="rbontorno@student.ethz.ch"}
+  { name="Ruben Bontorno", email="rubensebastiano@gmail.com"}
 ]
 description = "Python package for nested optimal transport"
 readme = "README.md"

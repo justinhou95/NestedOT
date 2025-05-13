@@ -25,6 +25,7 @@ double Nested2(Eigen::MatrixXd& X,
     const int power,
     const bool verbose);
 
+
 int main() {
 
     Eigen::MatrixXd L(3, 3);

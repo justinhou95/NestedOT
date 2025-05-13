@@ -6,6 +6,7 @@ aot_numerics/
 aotnumerics/
 src/Makefile
 notebook/experiment.ipynb
+src/solver_memory.cpp
 
 
 # Byte-compiled / optimized / DLL files
