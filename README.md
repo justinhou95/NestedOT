@@ -44,9 +44,9 @@ We compare **PNOT’s** C++ `nested_ot` solver against the only publicly availa
 - **Sample sizes**: 100, 200, 300, 500, 1000 (5 runs each)  
 - **Matrices**: L and M (shown below) are lower-triangular Cholesky factors used to generate zero-mean Gaussian path distributions:
 
-$$
+```math
 L = \begin{pmatrix} 1 & 0 & 0 & 0 \\ 2 & 2 & 0 & 0 \\ 1 & 1 & 3 & 0 \\ 2 & 2 & 1 & 2 \end{pmatrix}, \quad M = \begin{pmatrix} 1 & 0 & 0 & 0\\ 2 & 1 & 0 & 0\\ 3 & 2 & 1 & 0\\ 4 & 3 & 2 & 1 \end{pmatrix} 
-$$
+```
 
 - **Grid size**: $\delta=0.2$, **cost exponent**: $p=2$
 
@@ -58,7 +58,7 @@ $$
 | 500          | 0.019 ± 0.000             | 48.557 ± 0.897                  | 2543.1×       |
 | 1000         | 0.067 ± 0.014             | 221.924 ± 4.303                 | 3292.6×       |
 
-![Timing vs. Sample Size for Full-History OT](./Images_README/Non_Markovian.png)
+![Timing vs. Sample Size for Full-History OT](./assets/Non_Markovian.png)
 
 > **Over three orders of magnitude** faster than the only other public implementation—and the gap widens with larger samples.
 
@@ -79,7 +79,7 @@ We compare **PNOT’s** C++ `nested_ot` solver against AOTNumerics’ `solve_dy
 | 1500         | 0.052 ± 0.001             | 157.432 ± 2.981                 | 3002.5×       |
 | 2000         | 0.069 ± 0.001             | 221.344 ± 4.013                 | 3215.8×       |
 
-![Timing vs. Sample Size for Markovian OT](./Images_README/Markovian.png)
+![Timing vs. Sample Size for Markovian OT](./assets/Markovian.png)
 
 ## Reference
 
