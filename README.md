@@ -45,12 +45,12 @@ We compare **PNOT’s** C++ `nested_ot` solver against the only publicly availa
 - **Matrices**: L and M (shown below) are lower-triangular Cholesky factors used to generate zero-mean Gaussian path distributions:
 
 $$
-L = \begin{pmatrix} 1 & 0 & 0 & 0\\ 2 & 2 & 0 & 0\\ 1 & 1 & 3 & 0\\ 2 & 2 & 1 & 2 \end{pmatrix}, \quad M = \begin{pmatrix} 1 & 0 & 0 & 0\\ 2 & 1 & 0 & 0\\ 3 & 2 & 1 & 0\\ 4 & 3 & 2 & 1 \end{pmatrix} 
+L = \begin{pmatrix} 1 & 0 & 0 & 0 \\ 2 & 2 & 0 & 0 \\ 1 & 1 & 3 & 0 \\ 2 & 2 & 1 & 2 \end{pmatrix}, \quad M = \begin{pmatrix} 1 & 0 & 0 & 0\\ 2 & 1 & 0 & 0\\ 3 & 2 & 1 & 0\\ 4 & 3 & 2 & 1 \end{pmatrix} 
 $$
 
-- **Grid size**: \(\delta=0.2\), **cost exponent**: \(p=2\)
+- **Grid size**: $\delta=0.2$, **cost exponent**: $p=2$
 
-| Sample \(n\) | C++ time (mean ± std) [s] | AOTNumerics `solve_dynamic` [s] | Speed‑up (×)  |
+| Sample $n$ | C++ time (mean ± std) [s] | AOTNumerics `solve_dynamic` [s] | Speed‑up (×)  |
 |-------------:|:-------------------------:|:-------------------------------:|:-------------:|
 | 100          | 0.040 ± 0.011             | 1.866 ± 0.061                   | 46.5×         |
 | 200          | 0.024 ± 0.010             | 7.490 ± 0.194                   | 317.5×        |
@@ -58,7 +58,7 @@ $$
 | 500          | 0.019 ± 0.000             | 48.557 ± 0.897                  | 2543.1×       |
 | 1000         | 0.067 ± 0.014             | 221.924 ± 4.303                 | 3292.6×       |
 
-![Timing vs. Sample Size for Full-History OT](./full_history_timing.png)
+![Timing vs. Sample Size for Full-History OT](./Images_README/Non_Markovian.png)
 
 > **Over three orders of magnitude** faster than the only other public implementation—and the gap widens with larger samples.
 
@@ -66,12 +66,12 @@ $$
 
 We compare **PNOT’s** C++ `nested_ot` solver against AOTNumerics’ `solve_dynamic` for the **Markovian** case.
 
-- **Time steps**: \(T=10\)  
+- **Time steps**: $T=10$
 - **Sample sizes**: 100, 200, 300, 500, 1000 (5 runs each)
-- **Grid size**: \(\delta=0.1\), **cost exponent**: \(p=2\)  
-- **Path generation**: integrated-process (variance 0.25) & AR(1) (\(\phi=0.8,\sigma=1.0\))
+- **Grid size**: $\delta=0.1$, **cost exponent**: $p=2$ 
+- **Path generation**: integrated-process (variance 0.25) & AR(1) ($\phi=0.8,\sigma=1.0$)
 
-| Sample \(n\) | C++ time (mean ± std) [s] | AOTNumerics `solve_dynamic` [s] | Speed‑up (×)  |
+| Sample $n$ | C++ time (mean ± std) [s] | AOTNumerics `solve_dynamic` [s] | Speed‑up (×)  |
 |-------------:|:-------------------------:|:-------------------------------:|:-------------:|
 | 200          | 0.007 ± 0.000             | 8.531 ± 0.187                   | 1224.3×       |
 | 600          | 0.022 ± 0.001             | 46.357 ± 0.982                  | 2120.2×       |
@@ -79,7 +79,7 @@ We compare **PNOT’s** C++ `nested_ot` solver against AOTNumerics’ `solve_dy
 | 1500         | 0.052 ± 0.001             | 157.432 ± 2.981                 | 3002.5×       |
 | 2000         | 0.069 ± 0.001             | 221.344 ± 4.013                 | 3215.8×       |
 
-![Timing vs. Sample Size for Markovian OT](./Markov_timing.png)
+![Timing vs. Sample Size for Markovian OT](./Images_README/Markovian.png)
 
 ## Reference
 
