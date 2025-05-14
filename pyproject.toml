@@ -7,7 +7,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pnot"
-version = "0.1.2"
+version = "1.0.0"
 authors = [
   { name="Songyan Hou", email="justinhou95@gmail.com" },
   { name="Ruben Bontorno", email="rubensebastiano@gmail.com"}

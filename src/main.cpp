@@ -47,20 +47,18 @@ int main() {
 
     double res = Nested(X, Y, delta_n, markovian, 8, 2, true);
 
-    double res2 = Nested2(X, Y, delta_n, markovian, 8, 2, true);
+    bool markovians[2] = {true, false};
+    int num_threads[3] = {0, 1, 16};
+    int ps[3] = {1, 2, 3};
 
-    // bool markovians[2] = {true, false};
-    // int num_threads[3] = {0, 1, 16};
-    // int ps[3] = {1, 2, 3};
-
-    // for (int p: ps){
-    //     for (bool markovian: markovians){    
-    //         for (int num_thread: num_threads){
-    //             std::cout << "NumtThread: " << num_thread  << "  ploss: " << p << "  Markovian: " << markovian << std::endl;
-    //             double res = Nested(X, Y, delta_n, markovian, num_thread, p, true);
-    //             std::cout << "========================================================================" << std::endl;
-    //         }
-    //     }
-    // }
+    for (int p: ps){
+        for (bool markovian: markovians){    
+            for (int num_thread: num_threads){
+                std::cout << "NumtThread: " << num_thread  << "  ploss: " << p << "  Markovian: " << markovian << std::endl;
+                double res = Nested(X, Y, delta_n, markovian, num_thread, p, true);
+                std::cout << "========================================================================" << std::endl;
+            }
+        }
+    }
 
 }
