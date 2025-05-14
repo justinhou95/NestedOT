@@ -36,6 +36,7 @@ $ brew install llvm libomp
 - [demo.ipynb](https://github.com/justinhou95/NestedOT/blob/main/notebooks/demo.ipynb) — Quickstart and basic usage
 - [solver_explain.ipynb](https://github.com/justinhou95/NestedOT/blob/main/notebooks/solver_explain.ipynb) — How conditional distributions are estimated and nested computations performed
 - [example_of_use.ipynb](https://github.com/justinhou95/NestedOT/blob/main/notebooks/example_of_use.ipynb) — Approach similar to that described in Backhoff et al. 2021 for estimating adapted Wasserstein distance with continuous measures
+- [convergence_gaussian.ipynb](https://github.com/justinhou95/NestedOT/blob/main/notebooks/convergence_gaussian.ipynb) - Consistency experiments tested on Gaussian processes
 
 ## Performance Comparison:
 We compare **PNOT’s** C++ `nested_ot` solver against the only publicly available alternative—`solve_dynamic` from AOTNumerics (Eckstein & Pammer 2023). For both markovian and non-markovian solver, we obtain more than 3000× speed improvement and the gap widens with larger samples. 
