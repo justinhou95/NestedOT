@@ -59,3 +59,7 @@ We test the consistency of our solver as number of samples increases. By choosin
 - [Python Optimal Transport (POT)](https://github.com/PythonOT/POT)  
 - [Entropic Adapted Wasserstein on Gaussians](https://arxiv.org/abs/2412.18794)  
 
+
+## Contributors
+- Ruben Bontorno
+- Songyan Hou
